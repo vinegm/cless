@@ -1,8 +1,4 @@
 #include "board.hpp"
-#include "engine.hpp"
-#include "utils.hpp"
-#include <ncurses.h>
-#include <vector>
 
 #define title_padding line_padding
 #define board_padding (title_padding + line_padding * 2)
@@ -10,44 +6,20 @@
 #define board_width 18  // 8 + 8 for 2 chars per square, + 2 for borders
 #define board_height 10 // 8 for squares + 2 for borders
 
-static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
-                      BoardWinData *game);
-static void printw_board(WINDOW *board_win, BoardState *board,
-                         BoardWinData *game);
-static void printw_rank_labels(WINDOW *board_win, BoardWinData *game);
-static void printw_file_labels(WINDOW *board_win);
-static int get_square_from_orientation(BoardWinData *game, int draw_rank,
-                                       int draw_file);
-static int get_square_color(int square, BoardWinData *game);
-
-void init_board_data(BoardWinData *board_data, WinHandler *tui, int menu_win_id,
-                     BoardState *gameState) {
-  init_chess_board(gameState);
-
-  board_data->tui = tui;
-  board_data->menu_win_id = menu_win_id;
-  board_data->board = gameState;
-
-  board_data->selected_square = -1;
-  board_data->highlighted_square = E4;
-  board_data->board_orientation = white_orientation;
-  board_data->status = 0;
-}
-
-void render_board(WINDOW *parent_win, void *board_data) {
-  BoardWinData *game = (BoardWinData *)board_data;
-  BoardState *board = game->board;
+void BoardWin::draw() {
   WINDOW *board_win;
+
+  WINDOW *raw_parent_win = this->parent_win.get()->get();
   int parent_height, parent_width;
-  getmaxyx(parent_win, parent_height, parent_width);
+  getmaxyx(raw_parent_win, parent_height, parent_width);
 
-  werase(parent_win);
-  box(parent_win, 0, 0);
+  werase(raw_parent_win);
+  box(raw_parent_win, 0, 0);
 
-  wattron(parent_win, A_BOLD);
-  mvwprintw_centered(parent_win, parent_width, title_padding,
+  wattron(raw_parent_win, A_BOLD);
+  mvwprintw_centered(raw_parent_win, parent_width, title_padding,
                      "♛ CLESS - Chess Game ♛");
-  wattroff(parent_win, A_BOLD);
+  wattroff(raw_parent_win, A_BOLD);
 
   std::vector<std::string> instructions = {
       "Arrow keys/hjkl: move cursor", "Space/Enter: select", "o: flip board",
@@ -55,50 +27,55 @@ void render_board(WINDOW *parent_win, void *board_data) {
   int instructions_count = instructions.size();
   int instructions_line = parent_height - line_padding - instructions_count;
 
-  wattron(parent_win, A_DIM);
+  wattron(raw_parent_win, A_DIM);
   for (int i = 0; i < instructions_count; i++) {
-    mvwprintw_centered(parent_win, parent_width, instructions_line + i,
+    mvwprintw_centered(raw_parent_win, parent_width, instructions_line + i,
                        instructions[i]);
   }
-  wattroff(parent_win, A_DIM);
+  wattroff(raw_parent_win, A_DIM);
 
   int board_start_x = (parent_width - board_width) / 2;
-  board_win = derwin(parent_win, board_height, board_width, board_padding,
+  board_win = derwin(raw_parent_win, board_height, board_width, board_padding,
                      board_start_x);
 
-  printw_rank_labels(board_win, game);
-  printw_file_labels(board_win);
+  this->printw_rank_labels();
+  this->printw_file_labels();
 
-  game_loop(parent_win, board_win, board, game);
+  game_loop();
 
   werase(board_win);
   delwin(board_win);
 }
 
-static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
-                      BoardWinData *game) {
+void BoardWin::game_loop() {
+  WINDOW *raw_parent_win = this->parent_win.get()->get();
+  WINDOW *raw_board_win = this->board_win.get();
+
   int pressed_key;
-  const char *to_move_text;
-  keypad(board_win, true);
+  std::string to_move_text;
+  keypad(raw_board_win, true);
 
   int parent_height, parent_width;
-  getmaxyx(parent_win, parent_height, parent_width);
+  getmaxyx(raw_parent_win, parent_height, parent_width);
 
-  int orientation_dir = (game->board_orientation == white_orientation) ? 1 : -1;
+  int orientation_dir =
+      (this->board_orientation == BOARD_ORIENTATION_WHITE) ? 1 : -1;
   while (true) {
-    to_move_text = (board->to_move == PieceColor::WHITE) ? "♔ White to move"
-                                                         : "♚ Black to move";
+    // to_move_text = (this->game->to_move == PieceColor::WHITE)
+    //                    ? "♔ White to move"
+    //                    : "♚ Black to move";
+    to_move_text = "♔ White to move";
 
-    wattron(parent_win, A_BOLD);
-    mvwprintw_centered(parent_win, parent_width, next_move_padding,
+    wattron(raw_parent_win, A_BOLD);
+    mvwprintw_centered(raw_parent_win, parent_width, next_move_padding,
                        to_move_text);
-    wattroff(parent_win, A_BOLD);
+    wattroff(raw_parent_win, A_BOLD);
 
-    wrefresh(parent_win);
+    wrefresh(raw_parent_win);
 
-    printw_board(board_win, board, game);
+    printw_board();
 
-    pressed_key = wgetch(board_win);
+    pressed_key = wgetch(raw_board_win);
     switch (pressed_key) {
       case ' ':
       case 10:
@@ -107,56 +84,58 @@ static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
 
       case 'k':
       case KEY_UP:
-        game->highlighted_square += 8 * orientation_dir;
-        if (game->highlighted_square < 0) game->highlighted_square += 64;
-        if (game->highlighted_square > 63) game->highlighted_square -= 64;
+        this->highlighted_square += 8 * orientation_dir;
+        if (this->highlighted_square < 0) this->highlighted_square += 64;
+        if (this->highlighted_square > 63) this->highlighted_square -= 64;
         break;
 
       case 'j':
       case KEY_DOWN:
-        game->highlighted_square -= 8 * orientation_dir;
-        if (game->highlighted_square < 0) game->highlighted_square += 64;
-        if (game->highlighted_square > 63) game->highlighted_square -= 64;
+        this->highlighted_square -= 8 * orientation_dir;
+        if (this->highlighted_square < 0) this->highlighted_square += 64;
+        if (this->highlighted_square > 63) this->highlighted_square -= 64;
         break;
 
       case 'h':
       case KEY_LEFT: {
-        const int col = game->highlighted_square % 8;
+        const int col = this->highlighted_square % 8;
         const int left_edge = (orientation_dir == 1) ? 0 : 7;
 
         if (col == left_edge) {
-          game->highlighted_square += 7 * orientation_dir;
+          this->highlighted_square += 7 * orientation_dir;
           break;
         }
 
-        game->highlighted_square -= orientation_dir;
+        this->highlighted_square -= orientation_dir;
         break;
       }
 
       case 'l':
       case KEY_RIGHT: {
-        const int col = game->highlighted_square % 8;
+        const int col = this->highlighted_square % 8;
         const int right_edge = (orientation_dir == 1) ? 7 : 0;
 
         if (col == right_edge) {
-          game->highlighted_square -= 7 * orientation_dir;
+          this->highlighted_square -= 7 * orientation_dir;
           break;
         }
 
-        game->highlighted_square += orientation_dir;
+        this->highlighted_square += orientation_dir;
         break;
       }
 
       case 'o':
         orientation_dir *= -1;
-        game->board_orientation = !game->board_orientation;
-        game->highlighted_square = 63 - game->highlighted_square;
-        printw_rank_labels(board_win, game);
+        this->board_orientation = !this->board_orientation;
+        this->highlighted_square = 63 - this->highlighted_square;
+        this->printw_rank_labels();
         break;
 
-      case 'q': game->tui->current_window = game->menu_win_id; return;
+      case 'q': this->handler->current_window = this->menu_win_id; return;
 
-      case KEY_RESIZE: game->tui->event = game->tui->resize_event; return;
+      case KEY_RESIZE:
+        this->handler->event = this->handler->resize_event;
+        return;
 
       case ERR: break;
 
@@ -172,24 +151,24 @@ static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
  * @param board
  * @param game
  */
-static void printw_board(WINDOW *board_win, BoardState *board,
-                         BoardWinData *game) {
+void BoardWin::printw_board() {
+  WINDOW *raw_board_win = this->board_win.get();
   for (int draw_rank = 0; draw_rank < 8; draw_rank++) {
     for (int draw_file = 0; draw_file < 8; draw_file++) {
-      const int square =
-          get_square_from_orientation(game, draw_rank, draw_file);
-      const int color_pair = get_square_color(square, game);
+      const int square = get_square_from_orientation(draw_rank, draw_file);
+      const int color_pair = get_square_color(square);
 
-      if (has_colors()) wattron(board_win, COLOR_PAIR(color_pair));
+      if (has_colors()) wattron(raw_board_win, COLOR_PAIR(color_pair));
 
-      char piece_char = get_piece_char_at(board, static_cast<Square>(square));
-      mvwprintw(board_win, draw_rank + line_padding, draw_file * 2 + 1, "%c ",
-                piece_char);
+      // char piece_char =
+      //     this->game.get_piece_char_at(static_cast<Square>(square));
+      mvwprintw(raw_board_win, draw_rank + line_padding, draw_file * 2 + 1,
+                "%c ", 'T');
 
-      if (has_colors()) wattroff(board_win, COLOR_PAIR(color_pair));
+      if (has_colors()) wattroff(raw_board_win, COLOR_PAIR(color_pair));
     }
   }
-  wrefresh(board_win);
+  wrefresh(raw_board_win);
 }
 
 /**
@@ -198,19 +177,23 @@ static void printw_board(WINDOW *board_win, BoardState *board,
  * @param board_win
  * @param game - Game state to determine orientation
  */
-static void printw_rank_labels(WINDOW *board_win, BoardWinData *game) {
-  switch (game->board_orientation) {
-    case white_orientation:
+void BoardWin::printw_rank_labels() {
+  WINDOW *raw_board_win = this->board_win.get();
+
+  switch (this->board_orientation) {
+    case BOARD_ORIENTATION_WHITE:
       for (int i = 0; i < 8; i++) {
-        mvwprintw(board_win, i + line_padding, 0, "%d", 8 - i);
-        mvwprintw(board_win, i + line_padding, board_width - 1, "%d", 8 - i);
+        mvwprintw(raw_board_win, i + line_padding, 0, "%d", 8 - i);
+        mvwprintw(raw_board_win, i + line_padding, board_width - 1, "%d",
+                  8 - i);
       }
       break;
 
-    case black_orientation:
+    case BOARD_ORIENTATION_BLACK:
       for (int i = 0; i < 8; i++) {
-        mvwprintw(board_win, i + line_padding, 0, "%d", i + 1);
-        mvwprintw(board_win, i + line_padding, board_width - 1, "%d", i + 1);
+        mvwprintw(raw_board_win, i + line_padding, 0, "%d", i + 1);
+        mvwprintw(raw_board_win, i + line_padding, board_width - 1, "%d",
+                  i + 1);
       }
       break;
   }
@@ -221,9 +204,11 @@ static void printw_rank_labels(WINDOW *board_win, BoardWinData *game) {
  *
  * @param board_win
  */
-static void printw_file_labels(WINDOW *board_win) {
-  mvwprintw(board_win, 0, 1, "a b c d e f g h");
-  mvwprintw(board_win, board_height - 1, 1, "a b c d e f g h");
+void BoardWin::printw_file_labels() {
+  WINDOW *raw_board_win = this->board_win.get();
+
+  mvwprintw(raw_board_win, 0, 1, "a b c d e f g h");
+  mvwprintw(raw_board_win, board_height - 1, 1, "a b c d e f g h");
 }
 
 /**
@@ -234,16 +219,15 @@ static void printw_file_labels(WINDOW *board_win) {
  * @param draw_file
  * @return int
  */
-static int get_square_from_orientation(BoardWinData *game, int draw_rank,
-                                       int draw_file) {
+int BoardWin::get_square_from_orientation(int draw_rank, int draw_file) {
   int rank, file;
-  switch (game->board_orientation) {
-    case white_orientation:
+  switch (this->board_orientation) {
+    case BOARD_ORIENTATION_WHITE:
       rank = 7 - draw_rank;
       file = draw_file;
       return rank * 8 + file;
 
-    case black_orientation:
+    case BOARD_ORIENTATION_BLACK:
       rank = draw_rank;
       file = 7 - draw_file;
       return rank * 8 + file;
@@ -256,14 +240,13 @@ static int get_square_from_orientation(BoardWinData *game, int draw_rank,
  * @brief Get the color of the square
  *
  * @param square - Square needed to color
- * @param game - Game state to determine special squares
  * @return int
  */
-static int get_square_color(int square, BoardWinData *game) {
-  if (square == game->highlighted_square) return highlighted_square_color;
+int BoardWin::get_square_color(int square) {
+  if (square == this->highlighted_square) return HIGHLIGHTED_SQUARE;
 
-  if (square == game->selected_square) return selected_square_color;
+  if (square == this->selected_square) return SELECTED_SQUARE;
 
-  return ((square / 8 + square % 8) % 2 == 0) ? white_square_color
-                                              : black_square_color;
+  int is_white_square = ((square / 8 + square % 8) % 2 == 0) ? 1 : 0;
+  return is_white_square ? WHITE_SQUARE : BLACK_SQUARE;
 }

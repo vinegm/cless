@@ -18,16 +18,16 @@ int main() {
     start_color();
     use_default_colors();
 
-    init_pair(white_square_color, COLOR_BLACK, COLOR_WHITE);
-    init_pair(black_square_color, COLOR_WHITE, COLOR_BLACK);
-    init_pair(highlighted_square_color, COLOR_YELLOW, COLOR_BLUE);
-    init_pair(selected_square_color, COLOR_WHITE, COLOR_RED);
+    init_pair(WHITE_SQUARE, COLOR_BLACK, COLOR_WHITE);
+    init_pair(BLACK_SQUARE, COLOR_WHITE, COLOR_BLACK);
+    init_pair(HIGHLIGHTED_SQUARE, COLOR_YELLOW, COLOR_BLUE);
+    init_pair(SELECTED_SQUARE, COLOR_WHITE, COLOR_RED);
   }
 
   WinHandler handler(WINDOW_HEIGHT, WINDOW_WIDTH);
   handler.add_window(std::make_unique<MenuWin>());
   handler.add_window(std::make_unique<SizeWarningWin>());
-  // handler.add_window(std::make_unique<BoardWin>());
+  handler.add_window(std::make_unique<BoardWin>());
 
   handler.run();
 
