@@ -1,18 +1,18 @@
-CXX = g++
+CC = gcc
 
 LDFLAGS = -lncurses
 
 TARGET = cless.out
 
-SRCS = src/main.cpp
+SRCS = src/main.c src/menu.c
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CXX) -o $(TARGET) $(SRCS) $(LDFLAGS)
+	$(CC) -o $(TARGET) $(SRCS) $(LDFLAGS)
 
 run:
-	$(CXX) -o $(TARGET) $(SRCS) $(LDFLAGS) && ./$(TARGET)
+	$(CC) -o $(TARGET) $(SRCS) $(LDFLAGS) && ./$(TARGET)
 
 clean:
 	rm -f $(TARGET)
