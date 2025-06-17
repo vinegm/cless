@@ -1,5 +1,10 @@
 #include <ncurses.h>
 
-void highlight_selected(WINDOW *win, char choices[20], int selectedOption);
-int menu_loop(WINDOW *menuWin, char choices[][20], int choicesCount);
+typedef struct {
+  char **options;
+  int optionsCount;
+  int selectedOption;
+  int highlight;
+} MenuOptions;
 
+void menu(WINDOW *parentWin, MenuOptions *menuOptions);

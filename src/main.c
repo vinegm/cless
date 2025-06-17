@@ -2,47 +2,39 @@
 #include <locale.h>
 #include <ncurses.h>
 
-void loop();
+void main_loop(WINDOW *mainWin);
 
 int main() {
-  setlocale(LC_ALL, "");
-
-  // Initialize ncurses
-  initscr();
-  noecho();
-  curs_set(0);
-  cbreak();
-  // raw();
-
-  WINDOW *menuWin;
+  WINDOW *mainWin;
   int scrMaxY, scrMaxX;
-  int selected;
-  char choices[3][20] = {"choice1", "choice2", "choice3"};
-  int numChoices = sizeof(choices) / sizeof(choices[0]);
+
+  setlocale(LC_ALL, "");
+  initscr();   // Initialize ncurses
+  noecho();    // Don't echo input characters
+  curs_set(0); // Hide the cursor
 
   getmaxyx(stdscr, scrMaxY, scrMaxX);
+  mainWin = newwin(15, 41, scrMaxY / 4, scrMaxX / 4);
 
-  menuWin = newwin(26, scrMaxX / 2, scrMaxY / 2, 25);
-  box(menuWin, 0, 0);
-  refresh();
-  keypad(menuWin, TRUE);
+  main_loop(mainWin);
 
-  char *title = " ██████╗██╗     ███████╗███████╗███████╗\n"
-                "██╔════╝██║     ██╔════╝██╔════╝██╔════╝\n"
-                "██║     ██║     █████╗  ███████╗███████╗\n"
-                "██║     ██║     ██╔══╝  ╚════██║╚════██║\n"
-                "╚██████╗███████╗███████╗███████║███████║\n"
-                " ╚═════╝╚══════╝╚══════╝╚══════╝╚══════╝\n";
-  mvwprintw(menuWin, 1, 0, "%s", title);
-
-  selected = menu_loop(menuWin, choices, numChoices);
-
-  printw("you chose: %s", choices[selected]);
-
-  getch();
+  // Clean up
+  delwin(mainWin);
   endwin();
 
   return 0;
 }
 
-void loop() {}
+void main_loop(WINDOW *mainWin) {
+  int scrMaxY, scrMaxX;
+  char *opts[] = {"Player vs Robot", "Player vs Player", "Options", "Exit"};
+
+  MenuOptions menuOptions = {.options = opts,
+                             .optionsCount = sizeof(opts) / sizeof((opts)[0])};
+
+  getmaxyx(mainWin, scrMaxY, scrMaxX);
+
+  do {
+    menu(mainWin, &menuOptions);
+  } while (menuOptions.selectedOption != menuOptions.optionsCount - 1);
+}
