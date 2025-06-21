@@ -1,6 +1,4 @@
-#include "engine.h"
-#include <inttypes.h>
-#include <stdint.h>
+#include "converter.h"
 
 boardState fenToBitboard(const char *fen);
 void bitboardToFen(const boardState *board, char *fen);
@@ -40,9 +38,9 @@ void bitboardToFen(const boardState *board, char *fen) {
                                'p', 'n', 'b', 'r', 'q', 'k'};
   const uint64_t *bitboards[12] = {
       &board->whitePawns, &board->whiteKnights, &board->whiteBishops,
-      &board->whiteRooks, &board->whiteQueens, &board->whiteKing,
+      &board->whiteRooks, &board->whiteQueens,  &board->whiteKing,
       &board->blackPawns, &board->blackKnights, &board->blackBishops,
-      &board->blackRooks, &board->blackQueens, &board->blackKing};
+      &board->blackRooks, &board->blackQueens,  &board->blackKing};
 
   int fenIndex = 0;
 
@@ -73,13 +71,9 @@ void bitboardToFen(const boardState *board, char *fen) {
       }
     }
 
-    if (empty > 0) {
-      fen[fenIndex++] = '0' + empty;
-    }
+    if (empty > 0) { fen[fenIndex++] = '0' + empty; }
 
-    if (rank > 0) {
-      fen[fenIndex++] = '/';
-    }
+    if (rank > 0) { fen[fenIndex++] = '/'; }
   }
 
   fen[fenIndex] = '\0';
@@ -138,4 +132,3 @@ void placePiece(boardState *board, char piece, uint64_t mask) {
     default: break;
   }
 }
-

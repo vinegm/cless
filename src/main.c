@@ -1,6 +1,7 @@
 #include "menu.h"
 #include <locale.h>
-#include <ncurses.h>
+
+#define len(x) (sizeof(x) / sizeof((x)[0]))
 
 void main_loop(WINDOW *mainWin);
 
@@ -29,8 +30,7 @@ void main_loop(WINDOW *mainWin) {
   int scrMaxY, scrMaxX;
   char *opts[] = {"Player vs Robot", "Player vs Player", "Options", "Exit"};
 
-  MenuOptions menuOptions = {.options = opts,
-                             .optionsCount = sizeof(opts) / sizeof((opts)[0])};
+  MenuOptions menuOptions = {.options = opts, .optionsCount = len(opts)};
 
   getmaxyx(mainWin, scrMaxY, scrMaxX);
 
