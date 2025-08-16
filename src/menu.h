@@ -1,3 +1,5 @@
+#pragma once
+
 #include <ncurses.h>
 
 typedef struct {
@@ -5,6 +7,7 @@ typedef struct {
   int optionsCount;
   int selectedOption;
   int highlight;
+  int exitOptionIndex;
 } MenuOptions;
 
-void menu(WINDOW *parentWin, MenuOptions *menuOptions);
+void render_menu(WINDOW *parentWin, MenuOptions *menuOptions);

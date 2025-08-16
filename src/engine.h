@@ -1,24 +1,26 @@
+#pragma once
+
 #include <stdint.h>
 
+typedef enum {
+  PIECE_NONE = 0,
+  PIECE_PAWN,
+  PIECE_ROOK,
+  PIECE_KNIGHT,
+  PIECE_BISHOP,
+  PIECE_QUEEN,
+  PIECE_KING
+} PieceType;
+
+typedef enum { WHITE = 0, BLACK = 1 } PieceColor;
+
 typedef struct {
+  uint64_t pieces[2][7];
   uint64_t occupied;
-  uint64_t whitePieces;
-  uint64_t blackPieces;
-
-  uint64_t blackPawns;
-  uint64_t blackKnights;
-  uint64_t blackBishops;
-  uint64_t blackRooks;
-  uint64_t blackQueens;
-  uint64_t blackKing;
-
-  uint64_t whitePawns;
-  uint64_t whiteKnights;
-  uint64_t whiteBishops;
-  uint64_t whiteRooks;
-  uint64_t whiteQueens;
-  uint64_t whiteKing;
-} boardState;
+  uint64_t white_pieces;
+  uint64_t black_pieces;
+  int to_move;
+} ChessBoardState;
 
 // clang-format off
 typedef enum {
@@ -32,3 +34,5 @@ typedef enum {
   A1 = 0, B1, C1, D1, E1, F1, G1, H1,
 } Square;
 // clang-format on
+
+void init_chess_board(ChessBoardState *board);
