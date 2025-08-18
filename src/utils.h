@@ -8,5 +8,10 @@
 #define MIN_TERMINAL_HEIGHT 26
 #define MIN_TERMINAL_WIDTH 52
 
+#define line_padding 1
+
+#define len(x) (sizeof(x) / sizeof((x)[0]))
+
 void handle_win(WINDOW **win, int height, int width);
-void mvwprintw_centered(WINDOW *win, int width, int line, const char *str);
+void mvwprintw_centered(WINDOW *win, int win_width, int line, const char *fmt,
+                        ...);

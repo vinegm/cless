@@ -5,6 +5,10 @@
 static void navigation_loop(WINDOW *menu_win, MenuOptions *menu_opts);
 static void printw_menu(WINDOW *win, MenuOptions *menu_opts);
 
+#define title_padding line_padding * 2
+#define menu_padding title_padding + line_padding
+#define instructions_padding menu_padding + line_padding
+
 void render_menu(WINDOW *parent_win, MenuOptions *menu_opts) {
   WINDOW *menu_win;
   int parent_height, parent_width;
@@ -13,34 +17,28 @@ void render_menu(WINDOW *parent_win, MenuOptions *menu_opts) {
   werase(parent_win);
   box(parent_win, 0, 0);
 
-  // TODO: Make the centering dynamic
-  // due to wide characters it does not work with the title
-  int titleStartX = (parent_width - 40) / 2;
-  if (titleStartX < 1) titleStartX = 1;
+  const char *titleLines[] = {
+      " ██████╗██╗     ███████╗███████╗███████╗",
+      "██╔════╝██║     ██╔════╝██╔════╝██╔════╝",
+      "██║     ██║     █████╗  ███████╗███████╗",
+      "██║     ██║     ██╔══╝  ╚════██║╚════██║",
+      "╚██████╗███████╗███████╗███████║███████║",
+      " ╚═════╝╚══════╝╚══════╝╚══════╝╚══════╝",
+  };
 
-  const char *titleLines[] = {"", // Padding
-                              "", // Padding
-                              " ██████╗██╗     ███████╗███████╗███████╗",
-                              "██╔════╝██║     ██╔════╝██╔════╝██╔════╝",
-                              "██║     ██║     █████╗  ███████╗███████╗",
-                              "██║     ██║     ██╔══╝  ╚════██║╚════██║",
-                              "╚██████╗███████╗███████╗███████║███████║",
-                              " ╚═════╝╚══════╝╚══════╝╚══════╝╚══════╝",
-                              "", // Padding
-                              NULL};
-
-  int title_lines_count = 0;
-  for (int i = 0; titleLines[i] != NULL; i++) {
-    mvwprintw(parent_win, i, titleStartX, "%s", titleLines[i]);
-    title_lines_count++;
+  int title_lines_count = len(titleLines);
+  for (int i = 0; i < title_lines_count; i++) {
+    mvwprintw_centered(parent_win, parent_width, i + title_padding, "%s",
+                       titleLines[i]);
   }
 
-  const char *instructions[] = {"", "Arrow keys/jk: move cursor",
-                                "Space/Enter: select", "q: quit", NULL};
-  int instructions_y = title_lines_count + menu_opts->optionsCount;
+  const char *instructions[] = {"Arrow keys/jk: move cursor",
+                                "Space/Enter: select", "q: quit"};
+  int instructions_y =
+      title_lines_count + menu_opts->optionsCount + instructions_padding;
 
   wattron(parent_win, A_DIM);
-  for (int i = 0; instructions[i] != NULL; i++) {
+  for (int i = 0; i < len(instructions); i++) {
     mvwprintw_centered(parent_win, parent_width, instructions_y + i,
                        instructions[i]);
   }
@@ -48,8 +46,8 @@ void render_menu(WINDOW *parent_win, MenuOptions *menu_opts) {
 
   wrefresh(parent_win);
 
-  menu_win = derwin(parent_win, menu_opts->optionsCount + 1, parent_width,
-                    title_lines_count, 0);
+  menu_win = derwin(parent_win, menu_opts->optionsCount, parent_width,
+                    title_lines_count + menu_padding, 0);
   navigation_loop(menu_win, menu_opts);
 
   werase(menu_win);

@@ -35,14 +35,12 @@ void render_board(WINDOW *parent_win, ChessBoardState *board,
   mvwprintw(parent_win, board_start_y + 8, board_start_x + 2,
             " a b c d e f g h");
 
-  // TODO: use mvwprintw_centered, currently unable to pass the formating
   const char *to_move_text =
       (board->to_move == WHITE) ? "♔ White to move" : "♚ Black to move";
   int info_y = board_start_y + 10;
 
   wattron(parent_win, A_BOLD);
-  mvwprintw(parent_win, info_y, (parent_width - strlen(to_move_text)) / 2, "%s",
-            to_move_text);
+  mvwprintw_centered(parent_win, parent_width, info_y, to_move_text);
   wattroff(parent_win, A_BOLD);
 
   char *instructions[] = {"Arrow keys/hjkl: move cursor", "Space/Enter: select",

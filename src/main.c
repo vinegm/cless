@@ -6,8 +6,6 @@
 #include <locale.h>
 #include <ncurses.h>
 
-#define len(x) (sizeof(x) / sizeof((x)[0]))
-
 static WINDOW *g_main_win = NULL;
 
 void main_loop();
@@ -15,9 +13,9 @@ void play_chess_game();
 
 int main() {
   setlocale(LC_ALL, "");
-  initscr();            // Initialize ncurses
-  noecho();             // Don't echo input characters
-  curs_set(0);          // Hide the cursor
+  initscr();   // Initialize ncurses
+  noecho();    // Don't echo input characters
+  curs_set(0); // Hide the cursor
 
   // Initialize colors if supported
   if (has_colors()) {

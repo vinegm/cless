@@ -1,6 +1,8 @@
+#define _XOPEN_SOURCE 700
 #include "utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 static void show_size_warning();
 static int check_terminal_size();
@@ -56,10 +58,11 @@ static void show_size_warning() {
   mvwprintw_centered(warning_win, warning_width, 2,
                      "Your terminal is too small to display CLESS properly.");
 
-  // TODO: use mvwprintw_centered, currently unable to pass the formating
-  mvwprintw(warning_win, 4, 2, "Current size: %dx%d", scr_width, scr_height);
-  mvwprintw(warning_win, 5, 2, "Required size: %dx%d (minimum)",
-            MIN_TERMINAL_WIDTH, MIN_TERMINAL_HEIGHT);
+  mvwprintw_centered(warning_win, warning_width, 4, "Current size: %dx%d",
+                     scr_width, scr_height);
+  mvwprintw_centered(warning_win, warning_width, 5,
+                     "Required size: %dx%d (minimum)", MIN_TERMINAL_WIDTH,
+                     MIN_TERMINAL_HEIGHT);
 
   mvwprintw_centered(warning_win, warning_width, 7,
                      "Please resize your terminal or use a smaller font.");
@@ -117,16 +120,32 @@ void handle_win(WINDOW **win, int height, int width) {
 }
 
 /**
- * @brief Print a string centered in a window at a specific line.
+ * @brief Print a formatted string centered in a window at a specific line.
  *
  * @param win The window to print to.
  * @param win_width The width of the window.
  * @param line The line number to print the string on.
- * @param str The string to print.
+ * @param fmt The printf-style format string.
+ * @param ... Additional arguments for the format string. Buffer limit of 1024
+ * bytes.
  */
-void mvwprintw_centered(WINDOW *win, int win_width, int line, const char *str) {
-  int x_start = (win_width - strlen(str)) / 2;
+void mvwprintw_centered(WINDOW *win, int win_width, int line, const char *fmt,
+                        ...) {
+  char buffer[1024];
+
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  va_end(args);
+
+  wchar_t wbuffer[1024];
+  mbstowcs(wbuffer, buffer, 1024);
+
+  int str_width = wcswidth(wbuffer, wcslen(wbuffer));
+  if (str_width < 0) str_width = strlen(buffer); // fallback
+
+  int x_start = (win_width - str_width) / 2;
   if (x_start < 0) x_start = 0;
 
-  mvwprintw(win, line, x_start, "%s", str);
+  mvwprintw(win, line, x_start, "%s", buffer);
 }
