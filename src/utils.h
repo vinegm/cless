@@ -2,7 +2,7 @@
 
 #include <ncurses.h>
 
-#define WINDOW_HEIGHT 20
+#define WINDOW_HEIGHT 21
 #define WINDOW_WIDTH 50
 
 #define MIN_TERMINAL_HEIGHT 26

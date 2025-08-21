@@ -1,15 +1,17 @@
 #include "board.h"
-#include "common.h"
 #include "engine.h"
 #include "menu.h"
 #include "utils.h"
 #include <locale.h>
 #include <ncurses.h>
 
+#define RESIZE_EVENT -2
+#define EXIT_EVENT -1
+
 static WINDOW *g_main_win = NULL;
 
 void main_loop();
-void play_chess_game();
+void play_loop();
 
 int main() {
   setlocale(LC_ALL, "");
@@ -22,10 +24,10 @@ int main() {
     start_color();
     use_default_colors();
 
-    init_pair(1, COLOR_BLACK, COLOR_WHITE); // Light squares
-    init_pair(2, COLOR_YELLOW, COLOR_BLUE); // Highlighted square
-    init_pair(3, COLOR_WHITE, COLOR_RED);   // Selected square
-    init_pair(4, COLOR_WHITE, COLOR_BLACK); // Dark squares
+    init_pair(white_square_color, COLOR_BLACK, COLOR_WHITE);
+    init_pair(black_square_color, COLOR_WHITE, COLOR_BLACK);
+    init_pair(highlighted_square_color, COLOR_YELLOW, COLOR_BLUE);
+    init_pair(selected_square_color, COLOR_WHITE, COLOR_RED);
   }
 
   main_loop();
@@ -38,19 +40,20 @@ int main() {
 
 void main_loop() {
   char *opts[] = {"Player vs Robot", "Player vs Player", "Exit"};
-  enum { player_vs_robot = 0, player_vs_player = 1, exit_game = 2 };
+  enum { player_vs_robot = 0, player_vs_player, exit_game };
 
   MenuOptions menu_options = {.options = opts,
-                              .optionsCount = len(opts),
+                              .options_count = len(opts),
                               .highlight = player_vs_robot,
-                              .exitOptionIndex = exit_game};
+                              .exit_event = EXIT_EVENT,
+                              .resize_event = RESIZE_EVENT};
 
   handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
   while (TRUE) {
     render_menu(g_main_win, &menu_options);
 
-    switch (menu_options.selectedOption) {
-      case player_vs_robot: play_chess_game(); break;
+    switch (menu_options.selected_option) {
+      case player_vs_robot: play_loop(); break;
 
       case player_vs_player: break;
 
@@ -58,27 +61,32 @@ void main_loop() {
         handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
         break;
 
-      case exit_game: return; break;
+      case EXIT_EVENT:
+      case exit_game: return;
     }
   };
 }
 
-void play_chess_game() {
-  int game_status = 0;
+void play_loop() {
   ChessBoardState board;
-  BoardDisplay display = {
-      .selectedSquare = -1, .highlightedSquare = 28, .boardWin = &g_main_win};
+  GameWinState game = {.selected_square = -1,
+                       .highlighted_square = 28,
+                       .boardWin = &g_main_win,
+                       .board_orientation = white_orientation,
+                       .exit_event = EXIT_EVENT,
+                       .resize_event = RESIZE_EVENT};
 
   init_chess_board(&board);
 
   handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
 
   while (TRUE) {
-    handle_board_input(&display, &board, &game_status);
+    render_board(g_main_win, &board, &game);
 
-    switch (game_status) {
-      // TODO: Remove this magic number
-      case -1: handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH); return;
+    switch (game.status) {
+      case EXIT_EVENT:
+        handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
+        return;
 
       case RESIZE_EVENT:
         handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);

@@ -3,16 +3,23 @@
 #include "engine.h"
 #include <ncurses.h>
 
-// Board display structure
+#define white_orientation 0
+#define black_orientation 1
+
+#define white_square_color 1
+#define black_square_color 2
+#define highlighted_square_color 3
+#define selected_square_color 4
+
 typedef struct {
   WINDOW **boardWin;
-  int selectedSquare;    // -1 if no selection, 0-63 for square index
-  int highlightedSquare; // -1 if no highlight, 0-63 for square index
-} BoardDisplay;
+  int status;
+  int selected_square;
+  int highlighted_square;
+  int board_orientation;
+  int exit_event;
+  int resize_event;
+} GameWinState;
 
-// Function declarations for UI and interaction
 void render_board(WINDOW *parentWin, ChessBoardState *board,
-                  BoardDisplay *display);
-void create_centered_board_window(WINDOW **boardWin);
-void handle_board_input(BoardDisplay *display, ChessBoardState *board,
-                        int *game_result);
+                  GameWinState *game);

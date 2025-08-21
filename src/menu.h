@@ -4,10 +4,11 @@
 
 typedef struct {
   char **options;
-  int optionsCount;
-  int selectedOption;
+  int options_count;
+  int selected_option;
   int highlight;
-  int exitOptionIndex;
+  int exit_event;
+  int resize_event;
 } MenuOptions;
 
 void render_menu(WINDOW *parentWin, MenuOptions *menuOptions);

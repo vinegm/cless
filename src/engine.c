@@ -22,4 +22,15 @@ void init_chess_board(ChessBoardState *board) {
   board->pieces[BLACK][PIECE_KING] = 0x1000000000000000ULL;
 
   board->to_move = WHITE;
+
+  for (int square = 0; square < 64; square++) {
+    board->square_piece[square] = ' ';
+    for (int color = 0; color < 2; color++) {
+      for (int piece = 1; piece <= 6; piece++) {
+        if (board->pieces[color][piece] & (1ULL << square)) {
+          board->square_piece[square] = piece_ascii[color][piece];
+        }
+      }
+    }
+  }
 }
