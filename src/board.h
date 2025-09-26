@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine.h"
+#include "tui_handler.h"
 #include <ncurses.h>
 
 #define white_orientation 0
@@ -12,14 +13,14 @@
 #define selected_square_color 4
 
 typedef struct {
-  WINDOW **boardWin;
+  ChessBoardState *board;
+  TuiHandler *tui;
+  int menu_win_id;
   int status;
   int selected_square;
   int highlighted_square;
   int board_orientation;
-  int exit_event;
-  int resize_event;
-} GameWinState;
+} BoardData;
 
-void render_board(WINDOW *parentWin, ChessBoardState *board,
-                  GameWinState *game);
+void init_board_data(BoardData *board_data, TuiHandler *tui, int menu_win_id, ChessBoardState *gameState);
+void render_board(WINDOW *parentWin, void *board_data);

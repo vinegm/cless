@@ -1,17 +1,14 @@
 #include "board.h"
-#include "engine.h"
 #include "menu.h"
 #include "utils.h"
+
+#include "tui_handler.h"
 #include <locale.h>
 #include <ncurses.h>
+#include <stdint.h>
 
-#define RESIZE_EVENT -2
 #define EXIT_EVENT -1
-
-static WINDOW *g_main_win = NULL;
-
-void main_loop();
-void play_loop();
+#define RESIZE_EVENT -2
 
 int main() {
   setlocale(LC_ALL, "");
@@ -30,67 +27,31 @@ int main() {
     init_pair(selected_square_color, COLOR_WHITE, COLOR_RED);
   }
 
-  main_loop();
+  WINDOW *main_win = NULL;
+  handle_win(&main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
 
-  if (g_main_win) { delwin(g_main_win); }
+  TuiHandler tui = {.main_win = main_win,
+                    .exit_event = EXIT_EVENT,
+                    .resize_event = RESIZE_EVENT};
+  ChessBoardState board;
+  MenuData menu_data;
+  BoardData board_data;
+
+  WinRef menu_win = {.draw = render_menu, .data = &menu_data};
+  WinRef board_win = {.draw = render_board, .data = &board_data};
+
+  add_window(&tui, &menu_win);
+  add_window(&tui, &board_win);
+
+  init_menu_data(&menu_data, &tui, board_win.id);
+  init_board_data(&board_data, &tui, menu_win.id, &board);
+
+  tui.current_window = menu_win.id;
+
+  run_tui(&tui);
+
+  delwin(main_win);
   endwin();
 
   return 0;
-}
-
-void main_loop() {
-  char *opts[] = {"Player vs Robot", "Player vs Player", "Exit"};
-  enum { player_vs_robot = 0, player_vs_player, exit_game };
-
-  MenuOptions menu_options = {.options = opts,
-                              .options_count = len(opts),
-                              .highlight = player_vs_robot,
-                              .exit_event = EXIT_EVENT,
-                              .resize_event = RESIZE_EVENT};
-
-  handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
-  while (TRUE) {
-    render_menu(g_main_win, &menu_options);
-
-    switch (menu_options.selected_option) {
-      case player_vs_robot: play_loop(); break;
-
-      case player_vs_player: break;
-
-      case RESIZE_EVENT:
-        handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
-        break;
-
-      case EXIT_EVENT:
-      case exit_game: return;
-    }
-  };
-}
-
-void play_loop() {
-  ChessBoardState board;
-  GameWinState game = {.selected_square = -1,
-                       .highlighted_square = 28,
-                       .boardWin = &g_main_win,
-                       .board_orientation = white_orientation,
-                       .exit_event = EXIT_EVENT,
-                       .resize_event = RESIZE_EVENT};
-
-  init_chess_board(&board);
-
-  handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
-
-  while (TRUE) {
-    render_board(g_main_win, &board, &game);
-
-    switch (game.status) {
-      case EXIT_EVENT:
-        handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
-        return;
-
-      case RESIZE_EVENT:
-        handle_win(&g_main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
-        break;
-    }
-  };
 }
