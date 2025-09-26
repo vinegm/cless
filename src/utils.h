@@ -12,6 +12,6 @@
 
 #define len(x) (sizeof(x) / sizeof((x)[0]))
 
-void handle_win(WINDOW **win, int height, int width);
+void refresh_win(WINDOW **win, int height, int width);
 void mvwprintw_centered(WINDOW *win, int win_width, int line, const char *fmt,
                         ...);

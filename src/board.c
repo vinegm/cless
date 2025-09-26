@@ -1,18 +1,7 @@
-
 #include "board.h"
 #include "engine.h"
 #include "utils.h"
 #include <ncurses.h>
-
-static void game_loop(WINDOW *parent_win, WINDOW *board_win,
-                      ChessBoardState *board, BoardData *game);
-static void printw_board(WINDOW *board_win, ChessBoardState *board,
-                         BoardData *game);
-static void printw_rank_labels(WINDOW *board_win, BoardData *game);
-static void printw_file_labels(WINDOW *board_win);
-static int get_square_from_orientation(BoardData *game, int draw_rank,
-                                       int draw_file);
-static int get_square_color(int square, BoardData *game);
 
 #define title_padding line_padding
 #define board_padding (title_padding + line_padding * 2)
@@ -20,7 +9,18 @@ static int get_square_color(int square, BoardData *game);
 #define board_width 18  // 8 + 8 for 2 chars per square, + 2 for borders
 #define board_height 10 // 8 for squares + 2 for borders
 
-void init_board_data(BoardData *board_data, TuiHandler *tui, int menu_win_id, ChessBoardState *gameState) {
+static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
+                      BoardWinData *game);
+static void printw_board(WINDOW *board_win, BoardState *board,
+                         BoardWinData *game);
+static void printw_rank_labels(WINDOW *board_win, BoardWinData *game);
+static void printw_file_labels(WINDOW *board_win);
+static int get_square_from_orientation(BoardWinData *game, int draw_rank,
+                                       int draw_file);
+static int get_square_color(int square, BoardWinData *game);
+
+void init_board_data(BoardWinData *board_data, WinHandler *tui, int menu_win_id,
+                     BoardState *gameState) {
   init_chess_board(gameState);
 
   board_data->tui = tui;
@@ -31,12 +31,11 @@ void init_board_data(BoardData *board_data, TuiHandler *tui, int menu_win_id, Ch
   board_data->highlighted_square = E4;
   board_data->board_orientation = white_orientation;
   board_data->status = 0;
-
 }
 
 void render_board(WINDOW *parent_win, void *board_data) {
-  BoardData *game = (BoardData *)board_data;
-  ChessBoardState *board = game->board;
+  BoardWinData *game = (BoardWinData *)board_data;
+  BoardState *board = game->board;
   WINDOW *board_win;
   int parent_height, parent_width;
   getmaxyx(parent_win, parent_height, parent_width);
@@ -74,17 +73,17 @@ void render_board(WINDOW *parent_win, void *board_data) {
   delwin(board_win);
 }
 
-static void game_loop(WINDOW *parent_win, WINDOW *board_win,
-                      ChessBoardState *board, BoardData *game) {
+static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
+                      BoardWinData *game) {
   int pressed_key;
   char *to_move_text;
-  keypad(board_win, TRUE);
+  keypad(board_win, true);
 
   int parent_height, parent_width;
   getmaxyx(parent_win, parent_height, parent_width);
 
   int orientation_dir = (game->board_orientation == white_orientation) ? 1 : -1;
-  while (TRUE) {
+  while (true) {
     to_move_text =
         (board->to_move == WHITE) ? "♔ White to move" : "♚ Black to move";
 
@@ -171,8 +170,8 @@ static void game_loop(WINDOW *parent_win, WINDOW *board_win,
  * @param board
  * @param game
  */
-static void printw_board(WINDOW *board_win, ChessBoardState *board,
-                         BoardData *game) {
+static void printw_board(WINDOW *board_win, BoardState *board,
+                         BoardWinData *game) {
   for (int draw_rank = 0; draw_rank < 8; draw_rank++) {
     for (int draw_file = 0; draw_file < 8; draw_file++) {
       const int square =
@@ -181,7 +180,7 @@ static void printw_board(WINDOW *board_win, ChessBoardState *board,
 
       if (has_colors()) wattron(board_win, COLOR_PAIR(color_pair));
 
-      char piece_char = board->square_piece[square];
+      char piece_char = get_piece_char_at(board, square);
       mvwprintw(board_win, draw_rank + line_padding, draw_file * 2 + 1, "%c ",
                 piece_char);
 
@@ -197,7 +196,7 @@ static void printw_board(WINDOW *board_win, ChessBoardState *board,
  * @param board_win
  * @param game - Game state to determine orientation
  */
-static void printw_rank_labels(WINDOW *board_win, BoardData *game) {
+static void printw_rank_labels(WINDOW *board_win, BoardWinData *game) {
   switch (game->board_orientation) {
     case white_orientation:
       for (int i = 0; i < 8; i++) {
@@ -233,7 +232,7 @@ static void printw_file_labels(WINDOW *board_win) {
  * @param draw_file
  * @return int
  */
-static int get_square_from_orientation(BoardData *game, int draw_rank,
+static int get_square_from_orientation(BoardWinData *game, int draw_rank,
                                        int draw_file) {
   int rank, file;
   switch (game->board_orientation) {
@@ -258,7 +257,7 @@ static int get_square_from_orientation(BoardData *game, int draw_rank,
  * @param game - Game state to determine special squares
  * @return int
  */
-static int get_square_color(int square, BoardData *game) {
+static int get_square_color(int square, BoardWinData *game) {
   if (square == game->highlighted_square) return highlighted_square_color;
 
   if (square == game->selected_square) return selected_square_color;

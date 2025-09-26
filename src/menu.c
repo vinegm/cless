@@ -1,16 +1,16 @@
 #include "menu.h"
 #include "utils.h"
 
-static void navigation_loop(WINDOW *menu_win, MenuData *menu_opts);
-static void select_option(MenuData *menu_opts);
-static void printw_menu(WINDOW *win, MenuData *menu_opts);
-static int printw_title(WINDOW *win, int win_width);
-
 #define title_padding (line_padding * 4)
 #define menu_padding (title_padding + line_padding)
 #define instructions_padding (menu_padding + line_padding)
 
-void init_menu_data(MenuData *menu_data, TuiHandler *tui, int board_win_id) {
+static void navigation_loop(WINDOW *menu_win, MenuWinData *menu_opts);
+static void select_option(MenuWinData *menu_opts);
+static void printw_menu(WINDOW *win, MenuWinData *menu_opts);
+static int printw_title(WINDOW *win, int win_width);
+
+void init_menu_data(MenuWinData *menu_data, WinHandler *tui, int board_win_id) {
   menu_data->tui = tui;
   menu_data->board_win_id = board_win_id;
 
@@ -22,7 +22,7 @@ void init_menu_data(MenuData *menu_data, TuiHandler *tui, int board_win_id) {
 }
 
 void render_menu(WINDOW *parent_win, void *menu_data) {
-  MenuData *menu_opts = (MenuData *)menu_data;
+  MenuWinData *menu_opts = (MenuWinData *)menu_data;
   WINDOW *menu_win;
   int parent_height, parent_width;
   getmaxyx(parent_win, parent_height, parent_width);
@@ -54,11 +54,11 @@ void render_menu(WINDOW *parent_win, void *menu_data) {
   delwin(menu_win);
 }
 
-static void navigation_loop(WINDOW *menu_win, MenuData *menu_opts) {
+static void navigation_loop(WINDOW *menu_win, MenuWinData *menu_opts) {
   int pressed_key;
-  keypad(menu_win, TRUE);
+  keypad(menu_win, true);
 
-  while (TRUE) {
+  while (true) {
     printw_menu(menu_win, menu_opts);
 
     pressed_key = wgetch(menu_win);
@@ -93,7 +93,7 @@ static void navigation_loop(WINDOW *menu_win, MenuData *menu_opts) {
   }
 }
 
-static void select_option(MenuData *menu_opts) {
+static void select_option(MenuWinData *menu_opts) {
   switch (menu_opts->highlight) {
     case 0: menu_opts->tui->current_window = menu_opts->board_win_id; return;
 
@@ -109,7 +109,7 @@ static void select_option(MenuData *menu_opts) {
  * @param win
  * @param menu_opts
  */
-static void printw_menu(WINDOW *win, MenuData *menu_opts) {
+static void printw_menu(WINDOW *win, MenuWinData *menu_opts) {
   int win_width, _;
   getmaxyx(win, _, win_width);
 
