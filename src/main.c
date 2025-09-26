@@ -1,11 +1,7 @@
 #include "board.h"
 #include "menu.h"
-#include "utils.h"
-
-#include "tui_handler.h"
+#include "win_handler.h"
 #include <locale.h>
-#include <ncurses.h>
-#include <stdint.h>
 
 #define EXIT_EVENT -1
 #define RESIZE_EVENT -2
@@ -28,9 +24,8 @@ int main() {
   }
 
   WINDOW *main_win = NULL;
-  handle_win(&main_win, WINDOW_HEIGHT, WINDOW_WIDTH);
 
-  TuiHandler tui = {.main_win = main_win,
+  WinHandler tui = {.main_win = main_win,
                     .exit_event = EXIT_EVENT,
                     .resize_event = RESIZE_EVENT};
   ChessBoardState board;
@@ -45,8 +40,6 @@ int main() {
 
   init_menu_data(&menu_data, &tui, board_win.id);
   init_board_data(&board_data, &tui, menu_win.id, &board);
-
-  tui.current_window = menu_win.id;
 
   run_tui(&tui);
 

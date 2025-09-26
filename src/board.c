@@ -20,7 +20,8 @@ static int get_square_color(int square, BoardData *game);
 #define board_width 18  // 8 + 8 for 2 chars per square, + 2 for borders
 #define board_height 10 // 8 for squares + 2 for borders
 
-void init_board_data(BoardData *board_data, TuiHandler *tui, int menu_win_id, ChessBoardState *gameState) {
+void init_board_data(BoardData *board_data, WinHandler *tui, int menu_win_id,
+                     ChessBoardState *gameState) {
   init_chess_board(gameState);
 
   board_data->tui = tui;
@@ -31,7 +32,6 @@ void init_board_data(BoardData *board_data, TuiHandler *tui, int menu_win_id, Ch
   board_data->highlighted_square = E4;
   board_data->board_orientation = white_orientation;
   board_data->status = 0;
-
 }
 
 void render_board(WINDOW *parent_win, void *board_data) {

@@ -106,7 +106,7 @@ static int check_terminal_size() {
  * @param height The height of the window.
  * @param width The width of the window.
  */
-void handle_win(WINDOW **win, int height, int width) {
+void refresh_win(WINDOW **win, int height, int width) {
   while (!check_terminal_size()) {
     if (*win) {
       delwin(*win);

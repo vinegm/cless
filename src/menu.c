@@ -10,7 +10,7 @@ static int printw_title(WINDOW *win, int win_width);
 #define menu_padding (title_padding + line_padding)
 #define instructions_padding (menu_padding + line_padding)
 
-void init_menu_data(MenuData *menu_data, TuiHandler *tui, int board_win_id) {
+void init_menu_data(MenuData *menu_data, WinHandler *tui, int board_win_id) {
   menu_data->tui = tui;
   menu_data->board_win_id = board_win_id;
 
