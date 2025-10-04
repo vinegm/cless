@@ -1,13 +1,7 @@
 #pragma once
 
 #include <cstdint>
-
-#define encode_piece(color, type) ((color + 1) | (1 << (type + 1)))
-#define decode_piece(piece, color, type)                                       \
-  do {                                                                         \
-    *color = ((piece) & 1) ? WHITE : BLACK;                                    \
-    *type = (piece) ? (31 - __builtin_clz(piece)) - 1 : PIECE_NONE;            \
-  } while (0)
+#include <optional>
 
 #define RANK_1 0xFFULL
 #define RANK_2 (RANK_1 << (8 * 1))
@@ -27,31 +21,6 @@
 #define FILE_G 0x4040404040404040ULL
 #define FILE_H 0x8080808080808080ULL
 
-// enums for indexing pieces
-enum PieceType {
-  PIECE_NONE,
-  PIECE_PAWN,
-  PIECE_KNIGHT,
-  PIECE_BISHOP,
-  PIECE_ROOK,
-  PIECE_QUEEN,
-  PIECE_KING
-};
-
-// enums for indexing colors
-enum PieceColor { WHITE, BLACK };
-
-struct BoardState {
-  uint64_t bitboards[2][7]; // [PieceColor][PieceType]
-  uint8_t lookup_table[64]; // Encoded pieces
-
-  // uint8_t castling_rights; // Will implement later
-  uint8_t *en_passant_square;
-  int halfmove_clock;
-  int fullmove_counter;
-  PieceColor to_move;
-};
-
 // clang-format off
 // Little-endian rank-file
 enum Square {
@@ -66,6 +35,65 @@ enum Square {
 };
 // clang-format on
 
-void init_chess_board(BoardState *board);
-char get_piece_char_at(BoardState *board, Square square);
-bool move_piece(BoardState *board, Square from, Square to);
+// enums for indexing pieces
+enum PieceType {
+  PIECE_NONE,
+  PIECE_PAWN,
+  PIECE_KNIGHT,
+  PIECE_BISHOP,
+  PIECE_ROOK,
+  PIECE_QUEEN,
+  PIECE_KING
+};
+
+// enums for indexing colors
+enum PieceColor { WHITE, BLACK };
+
+struct Piece {
+  PieceColor color;
+  PieceType type;
+
+  bool operator==(const Piece &other) const {
+    return color == other.color && type == other.type;
+  }
+
+  bool operator!=(const Piece &other) const { return !(*this == other); }
+};
+
+class BoardState {
+public:
+  PieceColor to_move = WHITE;
+
+  BoardState();
+
+  Piece get_piece_at(Square square);
+  bool move_piece(Square from, Square to);
+
+private:
+  uint64_t bitboards[2][7]; // [PieceColor][PieceType]
+  uint8_t lookup_table[64]; // Encoded pieces
+
+  // uint8_t castling_rights; // Need to decide later how to encode
+  std::optional<Square> en_passant_square = std::nullopt;
+  int halfmove_clock = 0;
+  int fullmove_counter = 1;
+
+  bool validate_move(PieceColor piece_color, PieceType piece_type);
+
+  uint64_t square_to_bit(Square square) { return 1ULL << (square); }
+  void add_piece(PieceColor color, PieceType piece, Square square);
+  void remove_piece(PieceColor color, PieceType piece, Square square);
+  void pass_turn();
+
+  constexpr uint8_t encode_piece(PieceColor color, PieceType type) {
+    return (color << 7) | type;
+  }
+
+  constexpr PieceColor decode_color(uint8_t code) {
+    return static_cast<PieceColor>(code >> 7);
+  }
+
+  constexpr PieceType decode_type(uint8_t code) {
+    return static_cast<PieceType>(code & 0x7F);
+  }
+};

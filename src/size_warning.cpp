@@ -44,8 +44,6 @@ void SizeWarningWin::draw() {
   wattroff(raw_warning_win, A_BOLD);
 
   int pressed_key = wgetch(raw_warning_win);
-  if (std::tolower(pressed_key) == 'q') {
-    endwin();
-    exit(0);
-  }
+  if (std::tolower(pressed_key) == 'q')
+    this->handler->event = this->handler->exit_event;
 }

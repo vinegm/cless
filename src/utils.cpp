@@ -26,6 +26,20 @@ UniqueWindow create_centered_window(int height, int width) {
 }
 
 /**
+ * @brief Wrapper function to apply a modifier to a window and call a callback.
+ *
+ * @param win
+ * @param modifier
+ * @param callaback
+ */
+void modifier_wrapper(WINDOW *win, unsigned int modifier,
+                      std::function<void()> callaback) {
+  wattron(win, modifier);
+  callaback();
+  wattroff(win, modifier);
+}
+
+/**
  * @brief Print a formatted string centered in a window at a specific line.
  *
  * @param win The window to print to.
