@@ -1,6 +1,15 @@
-# Cless
+<div align="center">
+<pre>
+.  ██████╗██╗     ███████╗███████╗███████╗ .
+. ██╔════╝██║     ██╔════╝██╔════╝██╔════╝ .
+. ██║     ██║     █████╗  ███████╗███████╗ .
+. ██║     ██║     ██╔══╝  ╚════██║╚════██║ .
+. ╚██████╗███████╗███████╗███████║███████║ .
+.  ╚═════╝╚══════╝╚══════╝╚══════╝╚══════╝ .
+</pre>
+</div>
 
-Cless is a terminal-based chess game written in C that is currently under development.
+Cless (short for Cli Chess, even tho it is a tui) is a terminal-based chess game written in C with its own engine and move generation.
 
 # Planned Features
 

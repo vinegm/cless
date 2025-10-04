@@ -1,4 +1,4 @@
-#include "engine.h"
+#include "../src/engine.h"
 #include <criterion/criterion.h>
 #include <criterion/internal/test.h>
 
@@ -33,28 +33,37 @@ Test(engine, pawn_e2_to_e4) {
   BoardState board;
   init_chess_board(&board);
 
-  bool result = move_piece(&board, E2, E4);
+  Square from = E2;
+  Square to = E4;
+
+  bool result = move_piece(&board, from, to);
   cr_assert_eq(result, true, "Expected move to be valid");
 
-  check_made_move(&board, result, E2, E4, 'P', ' ', BLACK);
+  check_made_move(&board, result, from, to, 'P', ' ', BLACK);
 }
 
 Test(engine, incorrect_piece_color) {
   BoardState board;
   init_chess_board(&board);
 
-  bool result = move_piece(&board, E7, E5);
+  Square from = E7;
+  Square to = E5;
+
+  bool result = move_piece(&board, from, to);
   cr_assert_eq(result, false, "Expected move to be invalid");
 
-  check_made_move(&board, result, E7, E5, 'p', ' ', WHITE);
+  check_made_move(&board, result, from, to, 'p', ' ', WHITE);
 }
 
 Test(engine, move_invalid_piece) {
   BoardState board;
   init_chess_board(&board);
 
-  bool result = move_piece(&board, E3, E4);
+  Square from = E3;
+  Square to = E4;
+
+  bool result = move_piece(&board, from, to);
   cr_assert_eq(result, false, "Expected move to be invalid");
 
-  check_made_move(&board, result, E3, E4, ' ', ' ', WHITE);
+  check_made_move(&board, result, from, to, ' ', ' ', WHITE);
 }
