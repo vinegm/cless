@@ -1,7 +1,8 @@
-#include "board.h"
-#include "engine.h"
-#include "utils.h"
+#include "board.hpp"
+#include "engine.hpp"
+#include "utils.hpp"
 #include <ncurses.h>
+#include <vector>
 
 #define title_padding line_padding
 #define board_padding (title_padding + line_padding * 2)
@@ -48,9 +49,10 @@ void render_board(WINDOW *parent_win, void *board_data) {
                      "♛ CLESS - Chess Game ♛");
   wattroff(parent_win, A_BOLD);
 
-  char *instructions[] = {"Arrow keys/hjkl: move cursor", "Space/Enter: select",
-                          "o: flip board", "q: return to menu"};
-  int instructions_count = len(instructions);
+  std::vector<std::string> instructions = {
+      "Arrow keys/hjkl: move cursor", "Space/Enter: select", "o: flip board",
+      "q: return to menu"};
+  int instructions_count = instructions.size();
   int instructions_line = parent_height - line_padding - instructions_count;
 
   wattron(parent_win, A_DIM);
@@ -76,7 +78,7 @@ void render_board(WINDOW *parent_win, void *board_data) {
 static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
                       BoardWinData *game) {
   int pressed_key;
-  char *to_move_text;
+  const char *to_move_text;
   keypad(board_win, true);
 
   int parent_height, parent_width;
@@ -84,8 +86,8 @@ static void game_loop(WINDOW *parent_win, WINDOW *board_win, BoardState *board,
 
   int orientation_dir = (game->board_orientation == white_orientation) ? 1 : -1;
   while (true) {
-    to_move_text =
-        (board->to_move == WHITE) ? "♔ White to move" : "♚ Black to move";
+    to_move_text = (board->to_move == PieceColor::WHITE) ? "♔ White to move"
+                                                         : "♚ Black to move";
 
     wattron(parent_win, A_BOLD);
     mvwprintw_centered(parent_win, parent_width, next_move_padding,
@@ -180,7 +182,7 @@ static void printw_board(WINDOW *board_win, BoardState *board,
 
       if (has_colors()) wattron(board_win, COLOR_PAIR(color_pair));
 
-      char piece_char = get_piece_char_at(board, square);
+      char piece_char = get_piece_char_at(board, static_cast<Square>(square));
       mvwprintw(board_win, draw_rank + line_padding, draw_file * 2 + 1, "%c ",
                 piece_char);
 

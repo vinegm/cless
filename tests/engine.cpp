@@ -1,4 +1,4 @@
-#include "../src/engine.h"
+#include "../src/engine.hpp"
 #include <criterion/criterion.h>
 #include <criterion/internal/test.h>
 

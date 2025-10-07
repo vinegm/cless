@@ -1,7 +1,7 @@
-#include "engine.h"
+#include "engine.hpp"
+#include <cstdint>
+#include <cstring>
 #include <ncurses.h>
-#include <stdint.h>
-#include <string.h>
 
 #define square_to_bit(square) (1ULL << (square))
 
@@ -72,7 +72,8 @@ void init_chess_board(BoardState *board) {
 char get_piece_char_at(BoardState *board, Square square) {
   int color, piece = -1;
   get_piece_at(board, square, &color, &piece);
-  return get_piece_char(board, color, piece);
+  return get_piece_char(board, static_cast<PieceColor>(color),
+                        static_cast<PieceType>(piece));
 }
 
 static char get_piece_char(BoardState *board, PieceColor color,
@@ -89,11 +90,15 @@ bool move_piece(BoardState *board, Square from, Square to) {
   int piece_color, piece_type = -1;
   get_piece_at(board, from, &piece_color, &piece_type);
 
-  if (!validate_move(board, piece_color, piece_type)) return false;
+  if (!validate_move(board, static_cast<PieceColor>(piece_color),
+                     static_cast<PieceType>(piece_type)))
+    return false;
   if (piece_type == PIECE_PAWN) board->halfmove_clock = 0;
 
-  remove_piece(board, piece_color, piece_type, from);
-  add_piece(board, piece_color, piece_type, to);
+  remove_piece(board, static_cast<PieceColor>(piece_color),
+               static_cast<PieceType>(piece_type), from);
+  add_piece(board, static_cast<PieceColor>(piece_color),
+            static_cast<PieceType>(piece_type), to);
 
   pass_turn(board);
   return true;

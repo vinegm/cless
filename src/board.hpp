@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine.h"
-#include "win_handler.h"
+#include "engine.hpp"
+#include "win_handler.hpp"
 #include <ncurses.h>
 
 #define white_orientation 0

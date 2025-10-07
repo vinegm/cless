@@ -1,7 +1,6 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <cstdint>
 
 #define encode_piece(color, type) ((color + 1) | (1 << (type + 1)))
 #define decode_piece(piece, color, type)                                       \
@@ -29,7 +28,7 @@
 #define FILE_H 0x8080808080808080ULL
 
 // enums for indexing pieces
-typedef enum {
+enum PieceType {
   PIECE_NONE,
   PIECE_PAWN,
   PIECE_KNIGHT,
@@ -37,12 +36,12 @@ typedef enum {
   PIECE_ROOK,
   PIECE_QUEEN,
   PIECE_KING
-} PieceType;
+};
 
 // enums for indexing colors
-typedef enum { WHITE, BLACK } PieceColor;
+enum PieceColor { WHITE, BLACK };
 
-typedef struct {
+struct BoardState {
   uint64_t bitboards[2][7]; // [PieceColor][PieceType]
   uint8_t lookup_table[64]; // Encoded pieces
 
@@ -51,11 +50,11 @@ typedef struct {
   int halfmove_clock;
   int fullmove_counter;
   PieceColor to_move;
-} BoardState;
+};
 
 // clang-format off
 // Little-endian rank-file
-typedef enum {
+enum Square {
   A8 = 7 * 8, B8, C8, D8, E8, F8, G8, H8,
   A7 = 6 * 8, B7, C7, D7, E7, F7, G7, H7,
   A6 = 5 * 8, B6, C6, D6, E6, F6, G6, H6,
@@ -64,7 +63,7 @@ typedef enum {
   A3 = 2 * 8, B3, C3, D3, E3, F3, G3, H3,
   A2 = 1 * 8, B2, C2, D2, E2, F2, G2, H2,
   A1 = 0 * 8, B1, C1, D1, E1, F1, G1, H1,
-} Square;
+};
 // clang-format on
 
 void init_chess_board(BoardState *board);
