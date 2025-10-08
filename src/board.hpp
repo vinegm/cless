@@ -1,27 +1,38 @@
 #pragma once
 
 #include "engine.hpp"
+#include "utils.hpp"
 #include "win_handler.hpp"
 #include <ncurses.h>
 
-#define white_orientation 0
-#define black_orientation 1
+enum BoardOrientation { BOARD_ORIENTATION_WHITE, BOARD_ORIENTATION_BLACK };
 
-#define white_square_color 1
-#define black_square_color 2
-#define highlighted_square_color 3
-#define selected_square_color 4
+enum SquareColor {
+  WHITE_SQUARE,
+  BLACK_SQUARE,
+  HIGHLIGHTED_SQUARE,
+  SELECTED_SQUARE
+};
 
-typedef struct {
-  BoardState *board;
-  WinHandler *tui;
+class BoardWin : public BaseWindow {
+public:
+  void draw() override;
+
+private:
+  UniqueWindow board_win;
+
   int menu_win_id;
-  int status;
-  int selected_square;
   int highlighted_square;
-  int board_orientation;
-} BoardWinData;
+  int selected_square;
 
-void init_board_data(BoardWinData *board_data, WinHandler *tui, int menu_win_id,
-                     BoardState *gameState);
-void render_board(WINDOW *parentWin, void *board_data);
+  int board_orientation;
+  BoardState game;
+
+  void game_loop();
+  int handle_input(int ch);
+  void printw_board();
+  void printw_rank_labels();
+  void printw_file_labels();
+  int get_square_from_orientation(int draw_rank, int draw_file);
+  int get_square_color(int square);
+};
