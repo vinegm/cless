@@ -21,6 +21,8 @@ int main() {
     init_pair(black_square_color, COLOR_WHITE, COLOR_BLACK);
     init_pair(highlighted_square_color, COLOR_YELLOW, COLOR_BLUE);
     init_pair(selected_square_color, COLOR_WHITE, COLOR_RED);
+    init_pair(legal_move_color, COLOR_GREEN, COLOR_WHITE);
+    init_pair(capture_move_color, COLOR_RED, COLOR_YELLOW);
   }
 
   WINDOW *main_win = NULL;

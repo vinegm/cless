@@ -13,6 +13,11 @@ static void printw_file_labels(WINDOW *board_win);
 static int get_square_from_orientation(BoardData *game, int draw_rank,
                                        int draw_file);
 static int get_square_color(int square, BoardData *game);
+static void select_piece(BoardData *game, int square);
+static int try_make_move(BoardData *game, int from, int to);
+static void update_legal_moves(BoardData *game);
+static int is_legal_move(BoardData *game, int from, int to);
+static int is_capture_move(BoardData *game, int from, int to);
 
 #define title_padding line_padding
 #define board_padding (title_padding + line_padding * 2)
@@ -32,6 +37,14 @@ void init_board_data(BoardData *board_data, WinHandler *tui, int menu_win_id,
   board_data->highlighted_square = E4;
   board_data->board_orientation = white_orientation;
   board_data->status = 0;
+  board_data->show_legal_moves = 0;
+  
+  // Initialize move lists
+  board_data->legal_moves.count = 0;
+  board_data->selected_piece_moves.count = 0;
+  
+  // Generate initial legal moves
+  generate_moves(gameState, &board_data->legal_moves);
 }
 
 void render_board(WINDOW *parent_win, void *board_data) {
@@ -50,7 +63,7 @@ void render_board(WINDOW *parent_win, void *board_data) {
   wattroff(parent_win, A_BOLD);
 
   char *instructions[] = {"Arrow keys/hjkl: move cursor", "Space/Enter: select",
-                          "o: flip board", "q: return to menu"};
+                          "o: flip board", "m: toggle legal moves", "q: return to menu"};
   int instructions_count = len(instructions);
   int instructions_line = parent_height - line_padding - instructions_count;
 
@@ -100,9 +113,36 @@ static void game_loop(WINDOW *parent_win, WINDOW *board_win,
     pressed_key = wgetch(board_win);
     switch (pressed_key) {
       case ' ':
-      case 10:
-        // TODO: handle piece selection and movement
+      case 10: {
+        if (game->selected_square == -1) {
+          // No piece selected, try to select piece at highlighted square
+          char piece = board->square_piece[game->highlighted_square];
+          if (piece != ' ') {
+            // Check if it's the current player's piece
+            int piece_color = (piece >= 'A' && piece <= 'Z') ? WHITE : BLACK;
+            if (piece_color == board->to_move) {
+              select_piece(game, game->highlighted_square);
+            }
+          }
+        } else {
+          // Piece selected, try to make move
+          if (game->highlighted_square == game->selected_square) {
+            // Clicking on selected piece deselects it
+            game->selected_square = -1;
+            game->selected_piece_moves.count = 0;
+            game->show_legal_moves = 0;
+          } else {
+            // Try to make move
+            if (try_make_move(game, game->selected_square, game->highlighted_square)) {
+              game->selected_square = -1;
+              game->selected_piece_moves.count = 0;
+              game->show_legal_moves = 0;
+              update_legal_moves(game);
+            }
+          }
+        }
         break;
+      }
 
       case 'k':
       case KEY_UP:
@@ -151,6 +191,12 @@ static void game_loop(WINDOW *parent_win, WINDOW *board_win,
         game->board_orientation = !game->board_orientation;
         game->highlighted_square = 63 - game->highlighted_square;
         printw_rank_labels(board_win, game);
+        break;
+
+      case 'm':
+      case 'M':
+        // Toggle showing legal moves
+        game->show_legal_moves = !game->show_legal_moves;
         break;
 
       case 'q': game->tui->current_window = game->menu_win_id; return;
@@ -263,6 +309,127 @@ static int get_square_color(int square, BoardData *game) {
 
   if (square == game->selected_square) return selected_square_color;
 
+  // Check if square is a legal move destination
+  if (game->show_legal_moves || game->selected_square != -1) {
+    for (int i = 0; i < game->selected_piece_moves.count; i++) {
+      Move *move = &game->selected_piece_moves.moves[i];
+      if (move->to == square) {
+        return (move->captured != PIECE_NONE || move->is_en_passant) ? 
+               capture_move_color : legal_move_color;
+      }
+    }
+    
+    if (game->show_legal_moves) {
+      for (int i = 0; i < game->legal_moves.count; i++) {
+        Move *move = &game->legal_moves.moves[i];
+        if (move->to == square) {
+          return (move->captured != PIECE_NONE || move->is_en_passant) ? 
+                 capture_move_color : legal_move_color;
+        }
+      }
+    }
+  }
+
   return ((square / 8 + square % 8) % 2 == 0) ? white_square_color
                                               : black_square_color;
+}
+
+/**
+ * @brief Select a piece and generate its legal moves
+ *
+ * @param game - Game state
+ * @param square - Square containing the piece to select
+ */
+static void select_piece(BoardData *game, int square) {
+  game->selected_square = square;
+  game->selected_piece_moves.count = 0;
+  
+  // Generate moves for the selected piece
+  for (int i = 0; i < game->legal_moves.count; i++) {
+    Move *move = &game->legal_moves.moves[i];
+    if (move->from == square) {
+      if (game->selected_piece_moves.count < 256) {
+        game->selected_piece_moves.moves[game->selected_piece_moves.count++] = *move;
+      }
+    }
+  }
+}
+
+/**
+ * @brief Try to make a move from one square to another
+ *
+ * @param game - Game state
+ * @param from - Source square
+ * @param to - Destination square
+ * @return int - 1 if move was made successfully, 0 otherwise
+ */
+static int try_make_move(BoardData *game, int from, int to) {
+  // Find the move in legal moves
+  for (int i = 0; i < game->legal_moves.count; i++) {
+    Move *move = &game->legal_moves.moves[i];
+    if (move->from == from && move->to == to) {
+      // Handle promotion moves - for now, auto-promote to queen
+      if (move->promotion != PIECE_NONE && move->promotion != PIECE_QUEEN) {
+        // Look for queen promotion of the same move
+        for (int j = 0; j < game->legal_moves.count; j++) {
+          Move *queen_move = &game->legal_moves.moves[j];
+          if (queen_move->from == from && queen_move->to == to && 
+              queen_move->promotion == PIECE_QUEEN) {
+            move = queen_move;
+            break;
+          }
+        }
+      }
+      
+      if (make_move(game->board, *move)) {
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+/**
+ * @brief Update the legal moves list after a move has been made
+ *
+ * @param game - Game state
+ */
+static void update_legal_moves(BoardData *game) {
+  generate_moves(game->board, &game->legal_moves);
+}
+
+/**
+ * @brief Check if a move from one square to another is legal
+ *
+ * @param game - Game state
+ * @param from - Source square
+ * @param to - Destination square
+ * @return int - 1 if legal, 0 otherwise
+ */
+static int is_legal_move(BoardData *game, int from, int to) {
+  for (int i = 0; i < game->legal_moves.count; i++) {
+    Move *move = &game->legal_moves.moves[i];
+    if (move->from == from && move->to == to) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/**
+ * @brief Check if a move from one square to another is a capture
+ *
+ * @param game - Game state
+ * @param from - Source square
+ * @param to - Destination square
+ * @return int - 1 if capture, 0 otherwise
+ */
+static int is_capture_move(BoardData *game, int from, int to) {
+  for (int i = 0; i < game->legal_moves.count; i++) {
+    Move *move = &game->legal_moves.moves[i];
+    if (move->from == from && move->to == to) {
+      return (move->captured != PIECE_NONE || move->is_en_passant);
+    }
+  }
+  return 0;
 }

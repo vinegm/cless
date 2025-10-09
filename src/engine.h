@@ -15,12 +15,31 @@ typedef enum {
 typedef enum { WHITE = 0, BLACK = 1 } PieceColor;
 
 typedef struct {
+  int from;
+  int to;
+  PieceType piece;
+  PieceType captured;
+  int is_castle;
+  int is_en_passant;
+  PieceType promotion;
+} Move;
+
+typedef struct {
+  Move moves[256];
+  int count;
+} MoveList;
+
+typedef struct {
   uint64_t pieces[2][7];
   uint64_t occupied;
   uint64_t white_pieces;
   uint64_t black_pieces;
   int to_move;
   char square_piece[64];
+  int castle_rights; // Bits: 0=white kingside, 1=white queenside, 2=black kingside, 3=black queenside
+  int en_passant_square; // -1 if no en passant
+  int halfmove_clock;
+  int fullmove_number;
 } ChessBoardState;
 
 // clang-format off
@@ -38,3 +57,22 @@ typedef enum {
 // clang-format on
 
 void init_chess_board(ChessBoardState *board);
+void update_board_state(ChessBoardState *board);
+void generate_moves(ChessBoardState *board, MoveList *move_list);
+int is_square_attacked(ChessBoardState *board, int square, int by_color);
+int make_move(ChessBoardState *board, Move move);
+void unmake_move(ChessBoardState *board, Move move);
+
+// Utility functions for bitboards
+uint64_t get_rook_attacks(int square, uint64_t occupied);
+uint64_t get_bishop_attacks(int square, uint64_t occupied);
+uint64_t get_queen_attacks(int square, uint64_t occupied);
+uint64_t get_knight_attacks(int square);
+uint64_t get_king_attacks(int square);
+uint64_t get_pawn_attacks(int square, int color);
+uint64_t get_pawn_moves(int square, int color, uint64_t occupied);
+
+// Square utilities
+int square_to_rank(int square);
+int square_to_file(int square);
+int rank_file_to_square(int rank, int file);
