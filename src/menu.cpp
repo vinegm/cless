@@ -1,5 +1,4 @@
 #include "menu.hpp"
-#include "utils.hpp"
 #include <string>
 #include <vector>
 
@@ -8,45 +7,43 @@
 #define instructions_padding (menu_padding + line_padding)
 
 void MenuWin::draw() {
-  WINDOW *menu_win;
+  WINDOW *parent_win = this->handler->get_main_win();
+  int _, parent_width;
+  getmaxyx(parent_win, _, parent_width);
 
-  WINDOW *raw_parent_win = this->parent_win.get()->get();
-  int parent_height, parent_width;
-  getmaxyx(raw_parent_win, parent_height, parent_width);
+  box(parent_win, 0, 0);
 
-  werase(raw_parent_win);
-  box(raw_parent_win, 0, 0);
-
-  int title_lines_count = this->printw_title(raw_parent_win, parent_width);
+  int title_lines_count = this->printw_title();
 
   std::vector<std::string> instructions = {"Arrow keys/jk: move cursor",
                                            "Space/Enter: select", "q: quit"};
   int instructions_line =
       title_lines_count + this->options_count + instructions_padding;
 
-  wattroff(raw_parent_win, A_DIM);
-  for (int i = 0; i < instructions.size(); i++) {
-    mvwprintw_centered(raw_parent_win, parent_width, instructions_line + i,
-                       instructions[i]);
-  }
-  wattroff(raw_parent_win, A_DIM);
+  modifier_wrapper(parent_win, A_DIM, [&]() {
+    for (int i = 0; i < instructions.size(); i++) {
+      mvwprintw_centered(parent_win, parent_width, instructions_line + i,
+                         instructions[i]);
+    }
+  });
 
-  wrefresh(raw_parent_win);
+  WINDOW *menu_win = derwin(parent_win, this->options_count, parent_width,
+                            title_lines_count + menu_padding, 0);
+  this->menu_win = UniqueWindow(menu_win);
+  this->printw_menu();
 
-  menu_win = derwin(raw_parent_win, this->options_count, parent_width,
-                    title_lines_count + menu_padding, 0);
-  navigation_loop(menu_win);
-
-  werase(menu_win);
-  delwin(menu_win);
+  navigation_loop();
 }
 
-void MenuWin::navigation_loop(WINDOW *menu_win) {
-  int pressed_key;
-  keypad(menu_win, true);
+void MenuWin::navigation_loop() {
+  WINDOW *parent_win = this->handler->get_main_win();
+  WINDOW *menu_win = this->menu_win.get();
 
+  keypad(menu_win, true);
+  int pressed_key;
   while (true) {
-    printw_menu(menu_win);
+    wrefresh(parent_win);
+    this->printw_menu();
 
     pressed_key = wgetch(menu_win);
     switch (pressed_key) {
@@ -80,7 +77,7 @@ void MenuWin::navigation_loop(WINDOW *menu_win) {
 
 void MenuWin::select_option() {
   switch (this->highlight) {
-    case 0: this->handler->current_window = this->board_win_id; return;
+    case 0: this->handler->next_window = this->board_win_name; return;
 
     case 1: this->handler->event = this->handler->exit_event; return;
 
@@ -89,30 +86,31 @@ void MenuWin::select_option() {
 }
 
 /**
- * @brief Print the menu options, also handles the highlighting
- *
- * @param win
- * @param this
+ * @brief Prints menu options and handles highlighting
  */
-void MenuWin::printw_menu(WINDOW *win) {
+void MenuWin::printw_menu() {
+  WINDOW *menu_win = this->menu_win.get();
+
   int win_width, _;
-  getmaxyx(win, _, win_width);
+  getmaxyx(menu_win, _, win_width);
 
   for (int i = 0; i < this->options_count; i++) {
-    if (i == this->highlight) { wattron(win, A_REVERSE); }
-    mvwprintw_centered(win, win_width, i, this->options[i]);
-    if (i == this->highlight) { wattroff(win, A_REVERSE); }
+    if (i == this->highlight) { wattron(menu_win, A_REVERSE); }
+    mvwprintw_centered(menu_win, win_width, i, this->options[i]);
+    if (i == this->highlight) { wattroff(menu_win, A_REVERSE); }
   }
 }
 
 /**
  * @brief Print the title of the game
  *
- * @param win
- * @param win_width
  * @return int - The number of lines used by the title
  */
-int MenuWin::printw_title(WINDOW *win, int win_width) {
+int MenuWin::printw_title() {
+  WINDOW *parent_win = this->handler->get_main_win();
+  int _, parent_width;
+  getmaxyx(parent_win, _, parent_width);
+
   std::vector<std::wstring> titleLines = {
       L" ██████╗██╗     ███████╗███████╗███████╗",
       L"██╔════╝██║     ██╔════╝██╔════╝██╔════╝",
@@ -124,7 +122,8 @@ int MenuWin::printw_title(WINDOW *win, int win_width) {
 
   int title_lines_count = titleLines.size();
   for (int i = 0; i < title_lines_count; i++) {
-    mvwprintw_centered(win, win_width, i + title_padding, titleLines[i]);
+    mvwprintw_centered(parent_win, parent_width, i + title_padding,
+                       titleLines[i]);
   }
 
   return title_lines_count;

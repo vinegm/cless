@@ -1,152 +1,108 @@
 #include "engine.hpp"
 #include <cstdint>
-#include <cstring>
 #include <ncurses.h>
 
-#define square_to_bit(square) (1ULL << (square))
+BoardState::BoardState() : bitboards{}, lookup_table{} {
+  this->bitboards[WHITE][PIECE_PAWN] = RANK_2;
+  this->bitboards[WHITE][PIECE_KNIGHT] = square_to_bit(B1) | square_to_bit(G1);
+  this->bitboards[WHITE][PIECE_BISHOP] = square_to_bit(C1) | square_to_bit(F1);
+  this->bitboards[WHITE][PIECE_ROOK] = square_to_bit(A1) | square_to_bit(H1);
+  this->bitboards[WHITE][PIECE_QUEEN] = square_to_bit(D1);
+  this->bitboards[WHITE][PIECE_KING] = square_to_bit(E1);
 
-char get_piece_char_at(BoardState *board, Square square);
+  this->bitboards[BLACK][PIECE_PAWN] = RANK_7;
+  this->bitboards[BLACK][PIECE_KNIGHT] = square_to_bit(B8) | square_to_bit(G8);
+  this->bitboards[BLACK][PIECE_BISHOP] = square_to_bit(C8) | square_to_bit(F8);
+  this->bitboards[BLACK][PIECE_ROOK] = square_to_bit(A8) | square_to_bit(H8);
+  this->bitboards[BLACK][PIECE_QUEEN] = square_to_bit(D8);
+  this->bitboards[BLACK][PIECE_KING] = square_to_bit(E8);
 
-static char get_piece_char(BoardState *board, PieceColor color,
-                           PieceType piece);
-static bool captures(BoardState *board, Square at, int *captured_color,
-                     int *captured_piece);
-static void get_piece_at(BoardState *board, int square, int *color, int *type);
-static bool validate_move(BoardState *board, PieceColor piece_color,
-                          PieceType piece_type);
-static void pass_turn(BoardState *board);
-static void add_piece(BoardState *board, PieceColor color, PieceType piece,
-                      Square square);
-static void remove_piece(BoardState *board, PieceColor color, PieceType piece,
-                         Square square);
+  this->bitboards[WHITE][PIECE_NONE] = ~(RANK_1 | RANK_2);
+  this->bitboards[BLACK][PIECE_NONE] = ~(RANK_7 | RANK_8);
 
-void init_chess_board(BoardState *board) {
-  memset(board, 0, sizeof(BoardState));
-
-  board->bitboards[WHITE][PIECE_PAWN] = RANK_2;
-  board->bitboards[WHITE][PIECE_KNIGHT] = square_to_bit(B1) | square_to_bit(G1);
-  board->bitboards[WHITE][PIECE_BISHOP] = square_to_bit(C1) | square_to_bit(F1);
-  board->bitboards[WHITE][PIECE_ROOK] = square_to_bit(A1) | square_to_bit(H1);
-  board->bitboards[WHITE][PIECE_QUEEN] = square_to_bit(D1);
-  board->bitboards[WHITE][PIECE_KING] = square_to_bit(E1);
-
-  board->bitboards[BLACK][PIECE_PAWN] = RANK_7;
-  board->bitboards[BLACK][PIECE_KNIGHT] = square_to_bit(B8) | square_to_bit(G8);
-  board->bitboards[BLACK][PIECE_BISHOP] = square_to_bit(C8) | square_to_bit(F8);
-  board->bitboards[BLACK][PIECE_ROOK] = square_to_bit(A8) | square_to_bit(H8);
-  board->bitboards[BLACK][PIECE_QUEEN] = square_to_bit(D8);
-  board->bitboards[BLACK][PIECE_KING] = square_to_bit(E8);
-
-  board->bitboards[WHITE][PIECE_NONE] = ~(RANK_1 | RANK_2);
-  board->bitboards[BLACK][PIECE_NONE] = ~(RANK_7 | RANK_8);
-
-  board->to_move = WHITE;
-
-  board->lookup_table[A1] = encode_piece(WHITE, PIECE_ROOK);
-  board->lookup_table[B1] = encode_piece(WHITE, PIECE_KNIGHT);
-  board->lookup_table[C1] = encode_piece(WHITE, PIECE_BISHOP);
-  board->lookup_table[D1] = encode_piece(WHITE, PIECE_QUEEN);
-  board->lookup_table[E1] = encode_piece(WHITE, PIECE_KING);
-  board->lookup_table[F1] = encode_piece(WHITE, PIECE_BISHOP);
-  board->lookup_table[G1] = encode_piece(WHITE, PIECE_KNIGHT);
-  board->lookup_table[H1] = encode_piece(WHITE, PIECE_ROOK);
+  this->lookup_table[A1] = this->encode_piece(WHITE, PIECE_ROOK);
+  this->lookup_table[B1] = this->encode_piece(WHITE, PIECE_KNIGHT);
+  this->lookup_table[C1] = this->encode_piece(WHITE, PIECE_BISHOP);
+  this->lookup_table[D1] = this->encode_piece(WHITE, PIECE_QUEEN);
+  this->lookup_table[E1] = this->encode_piece(WHITE, PIECE_KING);
+  this->lookup_table[F1] = this->encode_piece(WHITE, PIECE_BISHOP);
+  this->lookup_table[G1] = this->encode_piece(WHITE, PIECE_KNIGHT);
+  this->lookup_table[H1] = this->encode_piece(WHITE, PIECE_ROOK);
 
   for (int sq = A2; sq <= H2; sq++) {
-    board->lookup_table[sq] = encode_piece(WHITE, PIECE_PAWN);
+    this->lookup_table[sq] = this->encode_piece(WHITE, PIECE_PAWN);
   }
 
-  board->lookup_table[A8] = encode_piece(BLACK, PIECE_ROOK);
-  board->lookup_table[B8] = encode_piece(BLACK, PIECE_KNIGHT);
-  board->lookup_table[C8] = encode_piece(BLACK, PIECE_BISHOP);
-  board->lookup_table[D8] = encode_piece(BLACK, PIECE_QUEEN);
-  board->lookup_table[E8] = encode_piece(BLACK, PIECE_KING);
-  board->lookup_table[F8] = encode_piece(BLACK, PIECE_BISHOP);
-  board->lookup_table[G8] = encode_piece(BLACK, PIECE_KNIGHT);
-  board->lookup_table[H8] = encode_piece(BLACK, PIECE_ROOK);
+  this->lookup_table[A8] = this->encode_piece(BLACK, PIECE_ROOK);
+  this->lookup_table[B8] = this->encode_piece(BLACK, PIECE_KNIGHT);
+  this->lookup_table[C8] = this->encode_piece(BLACK, PIECE_BISHOP);
+  this->lookup_table[D8] = this->encode_piece(BLACK, PIECE_QUEEN);
+  this->lookup_table[E8] = this->encode_piece(BLACK, PIECE_KING);
+  this->lookup_table[F8] = this->encode_piece(BLACK, PIECE_BISHOP);
+  this->lookup_table[G8] = this->encode_piece(BLACK, PIECE_KNIGHT);
+  this->lookup_table[H8] = this->encode_piece(BLACK, PIECE_ROOK);
 
   for (int sq = A7; sq <= H7; sq++) {
-    board->lookup_table[sq] = encode_piece(BLACK, PIECE_PAWN);
+    this->lookup_table[sq] = this->encode_piece(BLACK, PIECE_PAWN);
   }
 }
 
-char get_piece_char_at(BoardState *board, Square square) {
-  int color, piece = -1;
-  get_piece_at(board, square, &color, &piece);
-  return get_piece_char(board, static_cast<PieceColor>(color),
-                        static_cast<PieceType>(piece));
+Piece BoardState::get_piece_at(Square square) {
+  uint8_t encoded_piece = this->lookup_table[square];
+  if (encoded_piece == 0) return Piece{WHITE, PIECE_NONE};
+
+  PieceColor color = this->decode_color(encoded_piece);
+  PieceType type = this->decode_type(encoded_piece);
+  return Piece{color, type};
 }
 
-static char get_piece_char(BoardState *board, PieceColor color,
-                           PieceType piece) {
-  if (piece == PIECE_NONE) return ' ';
+bool BoardState::move_piece(Square from, Square to) {
+  uint8_t encoded_piece = this->lookup_table[from];
+  if (encoded_piece == 0) return false;
 
-  const char piece_char[2][6] = {{'P', 'N', 'B', 'R', 'Q', 'K'},
-                                 {'p', 'n', 'b', 'r', 'q', 'k'}};
+  PieceColor piece_color = this->decode_color(encoded_piece);
+  PieceType piece_type = this->decode_type(encoded_piece);
 
-  return piece_char[color][piece - 1];
-}
+  if (!validate_move(piece_color, piece_type)) return false;
+  if (piece_type == PIECE_PAWN) this->halfmove_clock = 0;
 
-bool move_piece(BoardState *board, Square from, Square to) {
-  int piece_color, piece_type = -1;
-  get_piece_at(board, from, &piece_color, &piece_type);
+  this->remove_piece(piece_color, piece_type, from);
+  this->add_piece(piece_color, piece_type, to);
 
-  if (!validate_move(board, static_cast<PieceColor>(piece_color),
-                     static_cast<PieceType>(piece_type)))
-    return false;
-  if (piece_type == PIECE_PAWN) board->halfmove_clock = 0;
-
-  remove_piece(board, static_cast<PieceColor>(piece_color),
-               static_cast<PieceType>(piece_type), from);
-  add_piece(board, static_cast<PieceColor>(piece_color),
-            static_cast<PieceType>(piece_type), to);
-
-  pass_turn(board);
+  this->pass_turn();
   return true;
 }
 
-static void get_piece_at(BoardState *board, int square, int *color, int *type) {
-  uint8_t piece = board->lookup_table[square];
-
-  if (piece)
-    decode_piece(piece, color, type);
-  else
-    *type = PIECE_NONE;
-}
-
-static bool validate_move(BoardState *board, PieceColor piece_color,
-                          PieceType piece_type) {
+bool BoardState::validate_move(PieceColor piece_color, PieceType piece_type) {
   // No piece at the source square
   if (piece_type == PIECE_NONE) return false;
 
   // Not the player's turn
-  if (piece_color != board->to_move) return false;
+  if (piece_color != this->to_move) return false;
 
   return true;
 }
 
-static void pass_turn(BoardState *board) {
-  int past_turn = board->to_move;
-  if (past_turn == BLACK) board->fullmove_counter++;
+void BoardState::add_piece(PieceColor color, PieceType piece, Square square) {
+  uint64_t square_bit = square_to_bit(square);
+  this->bitboards[color][piece] |= square_bit;
+  this->bitboards[color][PIECE_NONE] &= ~square_bit;
 
-  board->to_move = (past_turn == WHITE) ? BLACK : WHITE;
+  this->lookup_table[square] = this->encode_piece(color, piece);
 }
 
-static void add_piece(BoardState *board, PieceColor color, PieceType piece,
-                      Square square) {
+void BoardState::remove_piece(PieceColor color, PieceType piece,
+                              Square square) {
   uint64_t square_bit = square_to_bit(square);
-  board->bitboards[color][piece] |= square_bit;
-  board->bitboards[color][PIECE_NONE] &= ~square_bit;
+  this->bitboards[color][piece] &= ~square_bit;
+  this->bitboards[color][PIECE_NONE] |= square_bit;
 
-  // Update lookup table
-  board->lookup_table[square] = encode_piece(color, piece);
+  this->lookup_table[square] = 0;
 }
 
-static void remove_piece(BoardState *board, PieceColor color, PieceType piece,
-                         Square square) {
-  uint64_t square_bit = square_to_bit(square);
-  board->bitboards[color][piece] &= ~square_bit;
-  board->bitboards[color][PIECE_NONE] |= square_bit;
+void BoardState::pass_turn() {
+  bool black_played = this->to_move == BLACK;
+  if (black_played) this->fullmove_counter++;
 
-  // Update lookup table
-  board->lookup_table[square] = 0; // Empty square
+  this->to_move = black_played ? WHITE : BLACK;
 }

@@ -1,11 +1,10 @@
 #pragma once
 
-#include <memory>
+#include "utils.hpp"
 #include <ncurses.h>
 #include <stdexcept>
-#include <vector>
-
-#include "utils.hpp"
+#include <string>
+#include <unordered_map>
 
 #define EXIT_EVENT -1
 #define RESIZE_EVENT -2
@@ -15,47 +14,50 @@ class WinHandler;
 
 class BaseWindow {
 public:
-  BaseWindow() : id(-1) {}
+  void set_handler(WinHandler *handler) { this->handler = handler; }
 
-  void setInternals(int new_id, std::shared_ptr<UniqueWindow> parent,
-                    WinHandler *handler) {
-    this->id = new_id;
-    this->parent_win = parent;
-    this->handler = handler;
-  }
   virtual void draw() {
     throw std::runtime_error("BaseWindow::draw() not implemented!");
   }
 
 protected:
-  int id;
-  std::shared_ptr<UniqueWindow> parent_win;
   WinHandler *handler;
 };
 
+/*
+ * @brief Manages multiple ncurses windows and handles window transitions.
+ */
 class WinHandler {
 public:
+  std::string next_window = "";
   const int WINDOW_HEIGHT;
   const int WINDOW_WIDTH;
 
-  std::vector<std::unique_ptr<BaseWindow>> windows;
-  int current_window = 0;
-
   int event = 0;
-  int exit_event = EXIT_EVENT;
-  int resize_event = RESIZE_EVENT;
+  const int exit_event = EXIT_EVENT;
+  const int resize_event = RESIZE_EVENT;
 
   WinHandler(int height, int width)
-      : WINDOW_HEIGHT(height), WINDOW_WIDTH(width) {}
-  void run();
-  void add_window(std::unique_ptr<BaseWindow> window);
-  template <typename T, typename... Args> T *add_window(Args &&...args);
+      : WINDOW_HEIGHT(height), WINDOW_WIDTH(width) {
+    this->refresh_win();
+  }
+
+  template <typename T, typename... Args>
+  void add_window(const std::string &name, Args &&...args) {
+    auto window = std::make_unique<T>(std::forward<Args>(args)...);
+    window->set_handler(this);
+    windows.emplace(name, std::move(window));
+  }
+
+  void run(std::string start_window);
+  WINDOW *get_main_win() { return this->main_win.get(); }
 
 private:
-  std::shared_ptr<UniqueWindow> main_win =
-      std::make_shared<UniqueWindow>(nullptr);
+  std::string current_window = "";
+  UniqueWindow main_win = UniqueWindow(nullptr);
+  std::unordered_map<std::string, std::unique_ptr<BaseWindow>> windows;
 
-  void show_window(int win_id);
+  void show_window(std::string name);
   void refresh_win();
-  int check_terminal_size();
+  bool check_terminal_size();
 };

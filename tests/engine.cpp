@@ -1,69 +1,96 @@
 #include "../src/engine.hpp"
 #include <criterion/criterion.h>
 #include <criterion/internal/test.h>
+#include <criterion/logging.h>
 
-void check_made_move(BoardState *board, bool result, Square from, Square to,
-                     char expected_piece, char expected_target,
-                     PieceColor expected_next_turn) {
-  char piece_at_from = get_piece_char_at(board, from);
-  char piece_at_to = get_piece_char_at(board, to);
+struct expected_result {
+  bool result;
+  Square from;
+  Square to;
 
-  if (!result) {
-    cr_assert_eq(piece_at_from, expected_piece,
-                 "Expected source square '%c' to still have the piece after "
-                 "invalid move",
-                 expected_piece);
-    cr_assert_eq(
-        piece_at_to, expected_target,
-        "Expected target square '%c' to be unchanged after invalid move",
-        expected_target);
-    return;
+  Piece piece_at_from;
+  Piece piece_at_to;
+  PieceColor next_turn;
+};
+
+std::string piece_to_string(const Piece &piece) {
+  std::string piece_str;
+
+  switch (piece.color) {
+    case WHITE: piece_str += "White "; break;
+    case BLACK: piece_str += "Black "; break;
+    default: piece_str += "Unknown "; break;
   }
 
-  cr_assert_eq(piece_at_from, ' ',
-               "Expected source square to be empty after move");
-  cr_assert_eq(piece_at_to, expected_piece,
-               "Expected target square to have moved piece '%c' after move",
-               expected_piece);
-  cr_assert_eq(board->to_move, expected_next_turn,
+  switch (piece.type) {
+    case PIECE_PAWN: piece_str += "Pawn"; break;
+    case PIECE_ROOK: piece_str += "Rook"; break;
+    case PIECE_KNIGHT: piece_str += "Knight"; break;
+    case PIECE_BISHOP: piece_str += "Bishop"; break;
+    case PIECE_QUEEN: piece_str += "Queen"; break;
+    case PIECE_KING: piece_str += "King"; break;
+    case PIECE_NONE: piece_str = "Empty"; break;
+    default: piece_str = "Unknown"; break;
+  }
+
+  return piece_str;
+}
+
+void check_made_move(BoardState &board, bool move_result,
+                     expected_result &expected) {
+  Piece piece_at_from = board.get_piece_at(expected.from);
+  Piece piece_at_to = board.get_piece_at(expected.to);
+
+  cr_assert_eq(piece_at_from, expected.piece_at_from,
+               "Piece at 'from' mismatch: got %s, expected %s",
+               piece_to_string(piece_at_from).c_str(),
+               piece_to_string(expected.piece_at_from).c_str());
+
+  cr_assert_eq(piece_at_to, expected.piece_at_to,
+               "Piece at 'to' mismatch: got %s, expected %s",
+               piece_to_string(piece_at_to).c_str(),
+               piece_to_string(expected.piece_at_to).c_str());
+
+  cr_assert_eq(move_result, expected.result, "Move result mismatch");
+  cr_assert_eq(board.to_move, expected.next_turn,
                "Expected turn to switch correctly after move");
 }
 
 Test(engine, pawn_e2_to_e4) {
   BoardState board;
-  init_chess_board(&board);
+  expected_result expected = {.result = true,
+                              .from = E2,
+                              .to = E4,
+                              .piece_at_from = {WHITE, PIECE_NONE},
+                              .piece_at_to = {WHITE, PIECE_PAWN},
+                              .next_turn = BLACK};
 
-  Square from = E2;
-  Square to = E4;
-
-  bool result = move_piece(&board, from, to);
-  cr_assert_eq(result, true, "Expected move to be valid");
-
-  check_made_move(&board, result, from, to, 'P', ' ', BLACK);
+  bool result = board.move_piece(expected.from, expected.to);
+  check_made_move(board, result, expected);
 }
 
 Test(engine, incorrect_piece_color) {
   BoardState board;
-  init_chess_board(&board);
+  expected_result expected = {.result = false,
+                              .from = E7,
+                              .to = E5,
+                              .piece_at_from = {BLACK, PIECE_PAWN},
+                              .piece_at_to = {WHITE, PIECE_NONE},
+                              .next_turn = WHITE};
 
-  Square from = E7;
-  Square to = E5;
-
-  bool result = move_piece(&board, from, to);
-  cr_assert_eq(result, false, "Expected move to be invalid");
-
-  check_made_move(&board, result, from, to, 'p', ' ', WHITE);
+  bool result = board.move_piece(expected.from, expected.to);
+  check_made_move(board, result, expected);
 }
 
 Test(engine, move_invalid_piece) {
   BoardState board;
-  init_chess_board(&board);
+  expected_result expected = {.result = false,
+                              .from = E3,
+                              .to = E4,
+                              .piece_at_from = {WHITE, PIECE_NONE},
+                              .piece_at_to = {WHITE, PIECE_NONE},
+                              .next_turn = WHITE};
 
-  Square from = E3;
-  Square to = E4;
-
-  bool result = move_piece(&board, from, to);
-  cr_assert_eq(result, false, "Expected move to be invalid");
-
-  check_made_move(&board, result, from, to, ' ', ' ', WHITE);
+  bool result = board.move_piece(expected.from, expected.to);
+  check_made_move(board, result, expected);
 }
