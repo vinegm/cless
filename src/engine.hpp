@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 
 #define RANK_1 0xFFULL
 #define RANK_2 (RANK_1 << (8 * 1))
@@ -60,12 +61,16 @@ struct Piece {
   bool operator!=(const Piece &other) const { return !(*this == other); }
 };
 
-class BoardState {
+class ClessEngine {
 public:
   PieceColor to_move = WHITE;
 
-  BoardState();
+  ClessEngine()
+      : ClessEngine(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {}
+  ClessEngine(const std::string &fen);
 
+  std::string get_fen() const;
   Piece get_piece_at(Square square);
   bool move_piece(Square from, Square to);
 
@@ -85,15 +90,15 @@ private:
   void remove_piece(PieceColor color, PieceType piece, Square square);
   void pass_turn();
 
-  constexpr uint8_t encode_piece(PieceColor color, PieceType type) {
+  constexpr uint8_t encode_piece(PieceColor color, PieceType type) const {
     return (color << 7) | type;
   }
 
-  constexpr PieceColor decode_color(uint8_t code) {
+  constexpr PieceColor decode_color(uint8_t code) const {
     return static_cast<PieceColor>(code >> 7);
   }
 
-  constexpr PieceType decode_type(uint8_t code) {
+  constexpr PieceType decode_type(uint8_t code) const {
     return static_cast<PieceType>(code & 0x7F);
   }
 };

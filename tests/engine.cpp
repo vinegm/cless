@@ -36,7 +36,7 @@ std::string piece_to_string(const Piece &piece) {
   return piece_str;
 }
 
-void check_made_move(BoardState &board, bool move_result,
+void check_made_move(ClessEngine &board, bool move_result,
                      expected_result &expected) {
   Piece piece_at_from = board.get_piece_at(expected.from);
   Piece piece_at_to = board.get_piece_at(expected.to);
@@ -57,7 +57,7 @@ void check_made_move(BoardState &board, bool move_result,
 }
 
 Test(engine, pawn_e2_to_e4) {
-  BoardState board;
+  ClessEngine board;
   expected_result expected = {.result = true,
                               .from = E2,
                               .to = E4,
@@ -70,7 +70,7 @@ Test(engine, pawn_e2_to_e4) {
 }
 
 Test(engine, incorrect_piece_color) {
-  BoardState board;
+  ClessEngine board;
   expected_result expected = {.result = false,
                               .from = E7,
                               .to = E5,
@@ -83,7 +83,7 @@ Test(engine, incorrect_piece_color) {
 }
 
 Test(engine, move_invalid_piece) {
-  BoardState board;
+  ClessEngine board;
   expected_result expected = {.result = false,
                               .from = E3,
                               .to = E4,
@@ -93,4 +93,24 @@ Test(engine, move_invalid_piece) {
 
   bool result = board.move_piece(expected.from, expected.to);
   check_made_move(board, result, expected);
+}
+
+Test(engine, fen_initial_position) {
+  std::string expected_fen =
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  ClessEngine board;
+
+  std::string fen = board.get_fen();
+  cr_assert_eq(fen, expected_fen, "FEN mismatch:\ngot: %s\nexpected: %s",
+               fen.c_str(), expected_fen.c_str());
+}
+
+Test(engine, fen_random_position) {
+  std::string expected_fen =
+      "r1bq1rk1/pp1n1ppp/2p1pn2/3p4/3P4/2NBPN2/PP3PPP/R1BQ1RK1 w - - 0 10";
+  ClessEngine board(expected_fen);
+
+  std::string fen = board.get_fen();
+  cr_assert_eq(fen, expected_fen, "FEN mismatch:\ngot: %s\nexpected: %s",
+               fen.c_str(), expected_fen.c_str());
 }

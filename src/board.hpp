@@ -27,7 +27,7 @@ private:
   int selected_square = -1;
 
   int board_orientation = BOARD_ORIENTATION_WHITE;
-  BoardState game;
+  ClessEngine game;
 
   void game_loop();
   int handle_input(int ch);

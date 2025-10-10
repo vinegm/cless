@@ -11,8 +11,8 @@ void SizeWarningWin::draw() {
       create_centered_window(warning_height, warning_width);
   WINDOW *raw_warning_win = warning_win.get();
 
-  std::string expected_width = std::to_string(this->handler->WINDOW_WIDTH);
-  std::string expected_height = std::to_string(this->handler->WINDOW_HEIGHT);
+  std::string expected_width = std::to_string(handler->WINDOW_WIDTH);
+  std::string expected_height = std::to_string(handler->WINDOW_HEIGHT);
 
   std::string title = "TERMINAL SIZE WARNING";
   std::string curr_size = "Current size: " + std::to_string(scr_width) + "x" +
@@ -44,6 +44,5 @@ void SizeWarningWin::draw() {
   wattroff(raw_warning_win, A_BOLD);
 
   int pressed_key = wgetch(raw_warning_win);
-  if (std::tolower(pressed_key) == 'q')
-    this->handler->event = this->handler->exit_event;
+  if (std::tolower(pressed_key) == 'q') handler->event = handler->exit_event;
 }

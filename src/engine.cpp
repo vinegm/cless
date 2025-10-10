@@ -1,108 +1,203 @@
 #include "engine.hpp"
+#include <cctype>
 #include <cstdint>
 #include <ncurses.h>
+#include <sstream>
 
-BoardState::BoardState() : bitboards{}, lookup_table{} {
-  this->bitboards[WHITE][PIECE_PAWN] = RANK_2;
-  this->bitboards[WHITE][PIECE_KNIGHT] = square_to_bit(B1) | square_to_bit(G1);
-  this->bitboards[WHITE][PIECE_BISHOP] = square_to_bit(C1) | square_to_bit(F1);
-  this->bitboards[WHITE][PIECE_ROOK] = square_to_bit(A1) | square_to_bit(H1);
-  this->bitboards[WHITE][PIECE_QUEEN] = square_to_bit(D1);
-  this->bitboards[WHITE][PIECE_KING] = square_to_bit(E1);
+ClessEngine::ClessEngine(const std::string &fen) : bitboards{}, lookup_table{} {
+  std::istringstream fen_stream(fen);
+  std::string piece_placement, active_color, castling, en_passant, halfmove_str,
+      fullmove_str;
 
-  this->bitboards[BLACK][PIECE_PAWN] = RANK_7;
-  this->bitboards[BLACK][PIECE_KNIGHT] = square_to_bit(B8) | square_to_bit(G8);
-  this->bitboards[BLACK][PIECE_BISHOP] = square_to_bit(C8) | square_to_bit(F8);
-  this->bitboards[BLACK][PIECE_ROOK] = square_to_bit(A8) | square_to_bit(H8);
-  this->bitboards[BLACK][PIECE_QUEEN] = square_to_bit(D8);
-  this->bitboards[BLACK][PIECE_KING] = square_to_bit(E8);
+  fen_stream >> piece_placement >> active_color >> castling >> en_passant >>
+      halfmove_str >> fullmove_str;
 
-  this->bitboards[WHITE][PIECE_NONE] = ~(RANK_1 | RANK_2);
-  this->bitboards[BLACK][PIECE_NONE] = ~(RANK_7 | RANK_8);
+  // Piece placement
+  int rank = 7, file = 0;
+  for (char piece_char : piece_placement) {
+    if (piece_char == '/') {
+      rank--;
+      file = 0;
+      continue;
+    }
 
-  this->lookup_table[A1] = this->encode_piece(WHITE, PIECE_ROOK);
-  this->lookup_table[B1] = this->encode_piece(WHITE, PIECE_KNIGHT);
-  this->lookup_table[C1] = this->encode_piece(WHITE, PIECE_BISHOP);
-  this->lookup_table[D1] = this->encode_piece(WHITE, PIECE_QUEEN);
-  this->lookup_table[E1] = this->encode_piece(WHITE, PIECE_KING);
-  this->lookup_table[F1] = this->encode_piece(WHITE, PIECE_BISHOP);
-  this->lookup_table[G1] = this->encode_piece(WHITE, PIECE_KNIGHT);
-  this->lookup_table[H1] = this->encode_piece(WHITE, PIECE_ROOK);
+    if (isdigit(piece_char)) {
+      file += piece_char - '0';
+      continue;
+    }
 
-  for (int sq = A2; sq <= H2; sq++) {
-    this->lookup_table[sq] = this->encode_piece(WHITE, PIECE_PAWN);
+    PieceColor color = isupper(piece_char) ? WHITE : BLACK;
+    PieceType type;
+
+    switch (toupper(piece_char)) {
+      case 'P': type = PIECE_PAWN; break;
+      case 'R': type = PIECE_ROOK; break;
+      case 'N': type = PIECE_KNIGHT; break;
+      case 'B': type = PIECE_BISHOP; break;
+      case 'Q': type = PIECE_QUEEN; break;
+      case 'K': type = PIECE_KING; break;
+      default: type = PIECE_NONE; break;
+    }
+
+    if (type != PIECE_NONE)
+      add_piece(color, type, static_cast<Square>(rank * 8 + file));
+
+    file++;
   }
 
-  this->lookup_table[A8] = this->encode_piece(BLACK, PIECE_ROOK);
-  this->lookup_table[B8] = this->encode_piece(BLACK, PIECE_KNIGHT);
-  this->lookup_table[C8] = this->encode_piece(BLACK, PIECE_BISHOP);
-  this->lookup_table[D8] = this->encode_piece(BLACK, PIECE_QUEEN);
-  this->lookup_table[E8] = this->encode_piece(BLACK, PIECE_KING);
-  this->lookup_table[F8] = this->encode_piece(BLACK, PIECE_BISHOP);
-  this->lookup_table[G8] = this->encode_piece(BLACK, PIECE_KNIGHT);
-  this->lookup_table[H8] = this->encode_piece(BLACK, PIECE_ROOK);
+  // Active color
+  to_move = (active_color == "w") ? WHITE : BLACK;
 
-  for (int sq = A7; sq <= H7; sq++) {
-    this->lookup_table[sq] = this->encode_piece(BLACK, PIECE_PAWN);
+  // Castling rights (WIP)
+  if (castling != "-") {
+    // TODO: Implement castling rights parsing
   }
+
+  // En passant square
+  if (en_passant != "-") {
+    int file_idx = en_passant[0] - 'a';
+    int rank_idx = en_passant[1] - '1'; // -'1' for 0-based index
+    int ep_square = rank_idx * 8 + file_idx;
+    en_passant_square = static_cast<Square>(ep_square);
+  } else {
+    en_passant_square = std::nullopt;
+  }
+
+  // Halfmove clock and Fullmove counter
+  halfmove_clock = halfmove_str.empty() ? 0 : std::stoi(halfmove_str);
+  fullmove_counter = fullmove_str.empty() ? 1 : std::stoi(fullmove_str);
 }
 
-Piece BoardState::get_piece_at(Square square) {
-  uint8_t encoded_piece = this->lookup_table[square];
+std::string ClessEngine::get_fen() const {
+  std::string fen;
+
+  // Piece placement
+  for (int rank = 7; rank >= 0; rank--) {
+    int empty_count = 0;
+
+    for (int file = 0; file < 8; file++) {
+      Square square = static_cast<Square>(rank * 8 + file);
+      uint8_t encoded_piece = lookup_table[square];
+
+      if (encoded_piece == 0) {
+        empty_count++;
+      } else {
+        if (empty_count > 0) {
+          fen += std::to_string(empty_count);
+          empty_count = 0;
+        }
+
+        PieceColor color = decode_color(encoded_piece);
+        PieceType type = decode_type(encoded_piece);
+
+        char piece_char;
+        switch (type) {
+          case PIECE_PAWN: piece_char = 'P'; break;
+          case PIECE_ROOK: piece_char = 'R'; break;
+          case PIECE_KNIGHT: piece_char = 'N'; break;
+          case PIECE_BISHOP: piece_char = 'B'; break;
+          case PIECE_QUEEN: piece_char = 'Q'; break;
+          case PIECE_KING: piece_char = 'K'; break;
+          default: continue; // Skip invalid pieces
+        }
+
+        if (color == BLACK) { piece_char = tolower(piece_char); }
+
+        fen += piece_char;
+      }
+    }
+
+    if (empty_count > 0) { fen += std::to_string(empty_count); }
+
+    if (rank > 0) { fen += '/'; }
+  }
+
+  // Active color
+  fen += ' ';
+  fen += (to_move == WHITE) ? 'w' : 'b';
+
+  // TODO: Implement castling rights
+  fen += " -";
+
+  // En passant square
+  fen += ' ';
+  if (en_passant_square.has_value()) {
+    Square ep_square = en_passant_square.value();
+    int file = ep_square % 8;
+    int rank = ep_square / 8;
+    fen += static_cast<char>('a' + file);
+    fen += static_cast<char>('1' + rank);
+  } else {
+    fen += '-';
+  }
+
+  // Halfmove clock
+  fen += ' ';
+  fen += std::to_string(halfmove_clock);
+
+  // Fullmove counter
+  fen += ' ';
+  fen += std::to_string(fullmove_counter);
+
+  return fen;
+}
+
+Piece ClessEngine::get_piece_at(Square square) {
+  uint8_t encoded_piece = lookup_table[square];
   if (encoded_piece == 0) return Piece{WHITE, PIECE_NONE};
 
-  PieceColor color = this->decode_color(encoded_piece);
-  PieceType type = this->decode_type(encoded_piece);
+  PieceColor color = decode_color(encoded_piece);
+  PieceType type = decode_type(encoded_piece);
   return Piece{color, type};
 }
 
-bool BoardState::move_piece(Square from, Square to) {
-  uint8_t encoded_piece = this->lookup_table[from];
+bool ClessEngine::move_piece(Square from, Square to) {
+  uint8_t encoded_piece = lookup_table[from];
   if (encoded_piece == 0) return false;
 
-  PieceColor piece_color = this->decode_color(encoded_piece);
-  PieceType piece_type = this->decode_type(encoded_piece);
+  PieceColor piece_color = decode_color(encoded_piece);
+  PieceType piece_type = decode_type(encoded_piece);
 
   if (!validate_move(piece_color, piece_type)) return false;
-  if (piece_type == PIECE_PAWN) this->halfmove_clock = 0;
+  if (piece_type == PIECE_PAWN) halfmove_clock = 0;
 
-  this->remove_piece(piece_color, piece_type, from);
-  this->add_piece(piece_color, piece_type, to);
+  remove_piece(piece_color, piece_type, from);
+  add_piece(piece_color, piece_type, to);
 
-  this->pass_turn();
+  pass_turn();
   return true;
 }
 
-bool BoardState::validate_move(PieceColor piece_color, PieceType piece_type) {
+bool ClessEngine::validate_move(PieceColor piece_color, PieceType piece_type) {
   // No piece at the source square
   if (piece_type == PIECE_NONE) return false;
 
   // Not the player's turn
-  if (piece_color != this->to_move) return false;
+  if (piece_color != to_move) return false;
 
   return true;
 }
 
-void BoardState::add_piece(PieceColor color, PieceType piece, Square square) {
+void ClessEngine::add_piece(PieceColor color, PieceType piece, Square square) {
   uint64_t square_bit = square_to_bit(square);
-  this->bitboards[color][piece] |= square_bit;
-  this->bitboards[color][PIECE_NONE] &= ~square_bit;
+  bitboards[color][piece] |= square_bit;
+  bitboards[color][PIECE_NONE] &= ~square_bit;
 
-  this->lookup_table[square] = this->encode_piece(color, piece);
+  lookup_table[square] = encode_piece(color, piece);
 }
 
-void BoardState::remove_piece(PieceColor color, PieceType piece,
-                              Square square) {
+void ClessEngine::remove_piece(PieceColor color, PieceType piece,
+                               Square square) {
   uint64_t square_bit = square_to_bit(square);
-  this->bitboards[color][piece] &= ~square_bit;
-  this->bitboards[color][PIECE_NONE] |= square_bit;
+  bitboards[color][piece] &= ~square_bit;
+  bitboards[color][PIECE_NONE] |= square_bit;
 
-  this->lookup_table[square] = 0;
+  lookup_table[square] = 0;
 }
 
-void BoardState::pass_turn() {
-  bool black_played = this->to_move == BLACK;
-  if (black_played) this->fullmove_counter++;
+void ClessEngine::pass_turn() {
+  bool black_played = to_move == BLACK;
+  if (black_played) fullmove_counter++;
 
-  this->to_move = black_played ? WHITE : BLACK;
+  to_move = black_played ? WHITE : BLACK;
 }

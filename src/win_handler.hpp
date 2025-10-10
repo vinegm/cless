@@ -39,7 +39,7 @@ public:
 
   WinHandler(int height, int width)
       : WINDOW_HEIGHT(height), WINDOW_WIDTH(width) {
-    this->refresh_win();
+    refresh_win();
   }
 
   template <typename T, typename... Args>
@@ -50,7 +50,7 @@ public:
   }
 
   void run(std::string start_window);
-  WINDOW *get_main_win() { return this->main_win.get(); }
+  WINDOW *get_main_win() { return main_win.get(); }
 
 private:
   std::string current_window = "";
