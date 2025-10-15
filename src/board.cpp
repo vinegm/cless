@@ -1,5 +1,5 @@
 #include "board.hpp"
-#include "engine.hpp"
+#include "chess_types.hpp"
 #include <vector>
 
 #define title_padding line_padding
@@ -61,8 +61,8 @@ void BoardWin::game_loop() {
 
   keypad(board_win_ptr, true);
   while (true) {
-    to_move_text =
-        (game.to_move == PieceColor::WHITE) ? "White to move" : "Black to move";
+    to_move_text = (game.to_move() == PieceColor::WHITE) ? "White to move"
+                                                         : "Black to move";
 
     modifier_wrapper(parent_win, A_BOLD, [&]() {
       mvwprintw_centered(parent_win, parent_width, next_move_padding,
@@ -76,9 +76,7 @@ void BoardWin::game_loop() {
     pressed_key = wgetch(board_win_ptr);
     switch (pressed_key) {
       case ' ':
-      case 10:
-        // TODO: handle piece selection and movement
-        break;
+      case 10: handle_piece_selection(); break;
 
       case 'k':
       case KEY_UP:
@@ -228,31 +226,85 @@ int BoardWin::get_square_color(int square) {
 
   if (square == selected_square) return SELECTED_SQUARE;
 
+  if (selected_square.has_value()) {
+    std::vector<Move> legal_moves =
+        game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
+    for (const Move &move : legal_moves) {
+      if (move.to == square) return LEGAL_MOVE_SQUARE;
+    }
+  }
+
   int is_white_square = ((square / 8 + square % 8) % 2 == 0) ? 1 : 0;
   return is_white_square ? WHITE_SQUARE : BLACK_SQUARE;
 }
 
 /**
- * @brief Get the character representation of the piece at the given square
- *
- * @param square
- * @return char
+ * @brief Handle piece selection and movement logic
+ */
+void BoardWin::handle_piece_selection() {
+  // Select
+  if (!selected_square.has_value()) {
+    Piece piece = game.get_piece_at(static_cast<Square>(highlighted_square));
+    if (piece.type != PIECE_NONE && piece.color == game.to_move())
+      selected_square = highlighted_square;
+    return;
+  }
+
+  // Deselect
+  if (highlighted_square == selected_square) {
+    selected_square = std::nullopt;
+    return;
+  }
+
+  // Make move - find the actual legal move from move generator
+  std::vector<Move> legal_moves = 
+      game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
+  
+  Move* found_move = nullptr;
+  for (Move& move : legal_moves) {
+    if (move.to == highlighted_square) {
+      found_move = &move;
+      break;
+    }
+  }
+  
+  bool move_successful = false;
+  if (found_move) {
+    move_successful = game.make_move(*found_move);
+  }
+
+  // Deselect after move
+  if (move_successful) {
+    selected_square = std::nullopt;
+    return;
+  }
+
+  // Failed move, select new highlighted square
+  selected_square = std::nullopt;
+  handle_piece_selection();
+}
+
+/**
+ * @brief Get the character representation of a piece at a square
  */
 char BoardWin::get_piece_char_at(Square square) {
   Piece piece = game.get_piece_at(square);
-  char piece_str = '?';
 
+  if (piece.type == PIECE_NONE) { return ' '; }
+
+  char piece_char;
   switch (piece.type) {
-    case PIECE_PAWN: piece_str = 'P'; break;
-    case PIECE_ROOK: piece_str = 'R'; break;
-    case PIECE_KNIGHT: piece_str = 'K'; break;
-    case PIECE_BISHOP: piece_str = 'B'; break;
-    case PIECE_QUEEN: piece_str = 'Q'; break;
-    case PIECE_KING: piece_str = 'K'; break;
-    case PIECE_NONE: piece_str = ' '; break;
+    case PIECE_PAWN: piece_char = 'P'; break;
+    case PIECE_ROOK: piece_char = 'R'; break;
+    case PIECE_KNIGHT: piece_char = 'N'; break;
+    case PIECE_BISHOP: piece_char = 'B'; break;
+    case PIECE_QUEEN: piece_char = 'Q'; break;
+    case PIECE_KING: piece_char = 'K'; break;
+    default: piece_char = ' '; break;
   }
 
-  if (piece.color == PieceColor::BLACK) piece_str = std::tolower(piece_str);
+  // Convert to lowercase for black pieces
+  if (piece.color == BLACK) { piece_char = tolower(piece_char); }
 
-  return piece_str;
+  return piece_char;
 }

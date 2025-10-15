@@ -3,6 +3,7 @@
 #include "size_warning.hpp"
 #include "win_handler.hpp"
 #include <ncurses.h>
+#include <sys/types.h>
 
 #define WINDOW_HEIGHT 21
 #define WINDOW_WIDTH 50
@@ -22,11 +23,12 @@ int main() {
     init_pair(BLACK_SQUARE, COLOR_WHITE, COLOR_BLACK);
     init_pair(HIGHLIGHTED_SQUARE, COLOR_RED, COLOR_BLUE);
     init_pair(SELECTED_SQUARE, COLOR_WHITE, COLOR_RED);
+    init_pair(LEGAL_MOVE_SQUARE, COLOR_GREEN, COLOR_YELLOW);
   }
 
-  WinHandler handler(WINDOW_HEIGHT, WINDOW_WIDTH);
-  handler.add_window<MenuWin>("menu", "board");
-  handler.add_window<BoardWin>("board", "menu");
+  WinHandler handler(WINDOW_HEIGHT, WINDOW_WIDTH, "size_warning");
+  handler.add_window<MenuWin>("menu", MenuWinArgs{"board"});
+  handler.add_window<BoardWin>("board", BoardWinArgs{"menu"});
   handler.add_window<SizeWarningWin>("size_warning");
   handler.run("menu");
 

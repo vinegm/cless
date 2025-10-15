@@ -1,4 +1,5 @@
-#include "../src/engine.hpp"
+#include "engine.hpp"
+#include "chess_types.hpp"
 #include <criterion/criterion.h>
 #include <criterion/internal/test.h>
 #include <criterion/logging.h>
@@ -41,6 +42,10 @@ void check_made_move(ClessEngine &board, bool move_result,
   Piece piece_at_from = board.get_piece_at(expected.from);
   Piece piece_at_to = board.get_piece_at(expected.to);
 
+  cr_assert_eq(move_result, expected.result, "Move result mismatch");
+  cr_assert_eq(board.to_move(), expected.next_turn,
+               "Expected turn to switch correctly after move");
+
   cr_assert_eq(piece_at_from, expected.piece_at_from,
                "Piece at 'from' mismatch: got %s, expected %s",
                piece_to_string(piece_at_from).c_str(),
@@ -50,10 +55,6 @@ void check_made_move(ClessEngine &board, bool move_result,
                "Piece at 'to' mismatch: got %s, expected %s",
                piece_to_string(piece_at_to).c_str(),
                piece_to_string(expected.piece_at_to).c_str());
-
-  cr_assert_eq(move_result, expected.result, "Move result mismatch");
-  cr_assert_eq(board.to_move, expected.next_turn,
-               "Expected turn to switch correctly after move");
 }
 
 Test(engine, pawn_e2_to_e4) {
@@ -65,7 +66,35 @@ Test(engine, pawn_e2_to_e4) {
                               .piece_at_to = {WHITE, PIECE_PAWN},
                               .next_turn = BLACK};
 
-  bool result = board.move_piece(expected.from, expected.to);
+  bool result = board.make_move({expected.from, expected.to});
+  check_made_move(board, result, expected);
+}
+
+Test(engine, e6_en_passant) {
+  ClessEngine board(
+      "rnbqkbnr/ppp2ppp/8/3Pp3/8/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1");
+  expected_result expected = {.result = true,
+                              .from = D5,
+                              .to = E6,
+                              .piece_at_from = {WHITE, PIECE_NONE},
+                              .piece_at_to = {WHITE, PIECE_PAWN},
+                              .next_turn = BLACK};
+
+  bool result = board.make_move({expected.from, expected.to});
+  check_made_move(board, result, expected);
+}
+
+Test(engine, invalid_en_passant) {
+  ClessEngine board(
+      "rnbqkbnr/ppp2ppp/8/3Pp3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+  expected_result expected = {.result = false,
+                              .from = D5,
+                              .to = E6,
+                              .piece_at_from = {WHITE, PIECE_PAWN},
+                              .piece_at_to = {WHITE, PIECE_NONE},
+                              .next_turn = WHITE};
+
+  bool result = board.make_move({expected.from, expected.to});
   check_made_move(board, result, expected);
 }
 
@@ -78,7 +107,7 @@ Test(engine, incorrect_piece_color) {
                               .piece_at_to = {WHITE, PIECE_NONE},
                               .next_turn = WHITE};
 
-  bool result = board.move_piece(expected.from, expected.to);
+  bool result = board.make_move({expected.from, expected.to});
   check_made_move(board, result, expected);
 }
 
@@ -91,7 +120,7 @@ Test(engine, move_invalid_piece) {
                               .piece_at_to = {WHITE, PIECE_NONE},
                               .next_turn = WHITE};
 
-  bool result = board.move_piece(expected.from, expected.to);
+  bool result = board.make_move({expected.from, expected.to});
   check_made_move(board, result, expected);
 }
 

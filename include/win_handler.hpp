@@ -30,6 +30,7 @@ protected:
 class WinHandler {
 public:
   std::string next_window = "";
+  std::string size_warning_win_name = "";
   const int WINDOW_HEIGHT;
   const int WINDOW_WIDTH;
 
@@ -37,14 +38,24 @@ public:
   const int exit_event = EXIT_EVENT;
   const int resize_event = RESIZE_EVENT;
 
+  WinHandler(int height, int width, const std::string &name)
+      : WinHandler(height, width) {
+    size_warning_win_name = name;
+  }
   WinHandler(int height, int width)
       : WINDOW_HEIGHT(height), WINDOW_WIDTH(width) {
     refresh_win();
   }
 
-  template <typename T, typename... Args>
-  void add_window(const std::string &name, Args &&...args) {
-    auto window = std::make_unique<T>(std::forward<Args>(args)...);
+  template <typename NewWin> void add_window(const std::string &name) {
+    auto window = std::make_unique<NewWin>();
+    window->set_handler(this);
+    windows.emplace(name, std::move(window));
+  }
+
+  template <typename NewWin, typename Arg>
+  void add_window(const std::string &name, const Arg &arg) {
+    auto window = std::make_unique<NewWin>(arg);
     window->set_handler(this);
     windows.emplace(name, std::move(window));
   }
