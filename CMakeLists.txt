@@ -10,32 +10,31 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CORE_SOURCES src/engine.cpp src/position.cpp src/move_gen.cpp)
 
-set(TUI_SOURCES
-    src/main.cpp
-    src/win_handler.cpp
-    src/menu.cpp
-    src/board.cpp
-    src/size_warning.cpp
-    src/utils.cpp
-    ${CORE_SOURCES})
+set(TUI_SOURCES src/main.cpp src/win_handler.cpp src/menu.cpp src/board.cpp
+                src/size_warning.cpp src/utils.cpp)
 
-# For later UCI implementation
-set(UCI_SOURCES ${CORE_SOURCES})
+set(UCI_SOURCES src/uci_main.cpp src/uci_interface.cpp)
+
+add_library(core STATIC ${CORE_SOURCES})
+target_include_directories(core PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 add_executable(cless.out ${TUI_SOURCES})
-target_link_libraries(cless.out ncurses)
+target_link_libraries(cless.out ncurses core)
 target_include_directories(cless.out PRIVATE ${PROJECT_SOURCE_DIR}/include)
+
+add_executable(cless-uci.out ${UCI_SOURCES})
+target_link_libraries(cless-uci.out core)
+target_include_directories(cless-uci.out PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 enable_testing()
 
 find_library(CRITERION_LIB criterion)
 include_directories(/usr/include)
 
-set(TEST_SOURCES tests/perft_tests.cpp tests/unique_moves.cpp src/engine.cpp
-                 src/position.cpp src/move_gen.cpp)
+set(TEST_SOURCES tests/perft_tests.cpp tests/unique_moves.cpp)
 
 add_executable(tests.out ${TEST_SOURCES})
-target_link_libraries(tests.out ${CRITERION_LIB})
+target_link_libraries(tests.out ${CRITERION_LIB} core)
 target_include_directories(tests.out PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 add_test(NAME engine_tests COMMAND tests.out)
