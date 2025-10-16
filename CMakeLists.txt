@@ -8,18 +8,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(SOURCES
+set(CORE_SOURCES src/engine.cpp src/position.cpp src/move_gen.cpp)
+
+set(TUI_SOURCES
     src/main.cpp
     src/win_handler.cpp
     src/menu.cpp
     src/board.cpp
     src/size_warning.cpp
-    src/engine.cpp
-    src/position.cpp
-    src/move_gen.cpp
-    src/utils.cpp)
+    src/utils.cpp
+    ${CORE_SOURCES})
 
-add_executable(cless.out ${SOURCES})
+# For later UCI implementation
+set(UCI_SOURCES ${CORE_SOURCES})
+
+add_executable(cless.out ${TUI_SOURCES})
 target_link_libraries(cless.out ncurses)
 target_include_directories(cless.out PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
@@ -28,7 +31,8 @@ enable_testing()
 find_library(CRITERION_LIB criterion)
 include_directories(/usr/include)
 
-set(TEST_SOURCES tests/engine.cpp src/engine.cpp src/position.cpp src/move_gen.cpp)
+set(TEST_SOURCES tests/perft_tests.cpp tests/unique_moves.cpp src/engine.cpp
+                 src/position.cpp src/move_gen.cpp)
 
 add_executable(tests.out ${TEST_SOURCES})
 target_link_libraries(tests.out ${CRITERION_LIB})

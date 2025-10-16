@@ -166,7 +166,9 @@ Piece Position::get_piece_at(Square square) {
 
 Square Position::get_captured_square(const Move &move) const {
   if (move.is_en_passant()) {
-    return static_cast<Square>((move.from + move.to) / 2);
+    int to_file = square_file(move.to);
+    int from_rank = square_rank(move.from);
+    return indexes_to_square(from_rank, to_file);
   }
 
   return move.to;
@@ -177,22 +179,48 @@ void Position::make_move(const Move &move) {
   Piece piece = decode_piece(encoded_piece);
   Square captured_square = get_captured_square(move);
 
+  uint8_t captured_piece_encoded = 0;
   if (move.is_capture()) {
-    uint8_t encoded_captured_piece = lookup_table[captured_square];
-    Piece captured_piece = decode_piece(encoded_captured_piece);
+    captured_piece_encoded = lookup_table[captured_square];
+    Piece captured_piece = decode_piece(captured_piece_encoded);
     remove_piece(captured_piece.color, captured_piece.type, captured_square);
-
-    set_undo_info(move.from, move.to, captured_square, encoded_piece, encoded_captured_piece);
-  } else {
-    set_undo_info(move.from, move.to, captured_square, encoded_piece, 0);
   }
 
+  push_undo_info(move, captured_piece_encoded);
+
+  if (castling_rights != 0)
+    update_castling_rights(move, piece, captured_square);
+
   en_passant_square.reset();
-  if (piece.type == PIECE_PAWN) {
+  if (piece.type == PIECE_PAWN || move.is_capture()) {
     halfmove_clock = 0;
+  } else {
+    halfmove_clock++;
+  }
+
+  if (piece.type == PIECE_PAWN) {
     if (abs(square_rank(move.to) - square_rank(move.from)) == 2) {
-      en_passant_square = static_cast<Square>((move.from + move.to) / 2);
+      int to_file = square_file(move.to);
+      int from_rank = square_rank(move.from);
+      en_passant_square =
+          static_cast<Square>(indexes_to_square(from_rank, to_file));
     }
+  }
+
+  // Handle castling
+  if (move.is_castling()) {
+    Square rook_from, rook_to;
+    if (move.to > move.from) {
+      rook_from = static_cast<Square>(move.from + 3);
+      rook_to = static_cast<Square>(move.from + 1);
+    } else {
+      rook_from = static_cast<Square>(move.from - 4);
+      rook_to = static_cast<Square>(move.from - 1);
+    }
+    uint8_t rook_encoded = lookup_table[rook_from];
+    Piece rook = decode_piece(rook_encoded);
+    remove_piece(rook.color, rook.type, rook_from);
+    add_piece(rook.color, rook.type, rook_to);
   }
 
   remove_piece(piece.color, piece.type, move.from);
@@ -201,11 +229,18 @@ void Position::make_move(const Move &move) {
 }
 
 void Position::undo_move() {
-  Square from = undo_info.from_square;
-  Square to = undo_info.to_square;
-  Square captured_square = undo_info.captured_square;
+  if (undo_stack.empty()) return;
 
-  Piece moved_piece = decode_piece(undo_info.moved_piece_encoded);
+  UndoInfo undo_info = undo_stack.back();
+  undo_stack.pop_back();
+
+  Move move = undo_info.move;
+  Square from = move.from;
+  Square to = move.to;
+  Square captured_square = get_captured_square(move);
+
+  uint8_t moved_piece_encoded = lookup_table[to];
+  Piece moved_piece = decode_piece(moved_piece_encoded);
   Piece captured_piece = decode_piece(undo_info.captured_piece_encoded);
 
   remove_piece(moved_piece.color, moved_piece.type, to);
@@ -214,9 +249,27 @@ void Position::undo_move() {
   if (captured_piece.type != PIECE_NONE)
     add_piece(captured_piece.color, captured_piece.type, captured_square);
 
+  if (move.is_castling()) {
+    Square rook_from, rook_to;
+    if (to > from) {
+      rook_from = static_cast<Square>(from + 3);
+      rook_to = static_cast<Square>(from + 1);
+    } else {
+      rook_from = static_cast<Square>(from - 4);
+      rook_to = static_cast<Square>(from - 1);
+    }
+
+    uint8_t rook_encoded = lookup_table[rook_to];
+    Piece rook = decode_piece(rook_encoded);
+
+    remove_piece(rook.color, rook.type, rook_to);
+    add_piece(rook.color, rook.type, rook_from);
+  }
+
   castling_rights = undo_info.castling_rights;
   en_passant_square = undo_info.en_passant_square;
   halfmove_clock = undo_info.halfmove_clock;
+  fullmove_counter = undo_info.fullmove_counter;
 
   to_move = opposite_color(to_move);
 }
@@ -246,17 +299,56 @@ void Position::pass_turn() {
   to_move = opposite_color(to_move);
 }
 
-void Position::set_undo_info(Square from, Square to, Square captured_square,
-                             uint8_t moved_piece_encoded,
-                             uint8_t captured_piece_encoded) {
-  undo_info.from_square = from;
-  undo_info.to_square = to;
-  undo_info.captured_square = captured_square;
-
-  undo_info.moved_piece_encoded = moved_piece_encoded;
+void Position::push_undo_info(const Move &move,
+                              uint8_t captured_piece_encoded) {
+  UndoInfo undo_info;
+  undo_info.move = move;
   undo_info.captured_piece_encoded = captured_piece_encoded;
 
   undo_info.castling_rights = castling_rights;
   undo_info.en_passant_square = en_passant_square;
   undo_info.halfmove_clock = halfmove_clock;
+  undo_info.fullmove_counter = fullmove_counter;
+
+  undo_stack.push_back(undo_info);
+}
+
+void Position::update_castling_rights(const Move &move, const Piece &piece,
+                                      Square captured_square) {
+  if (piece.type == PIECE_KING) {
+    if (piece.color == WHITE) {
+      castling_rights &= ~(WHITE_CASTLE_KING | WHITE_CASTLE_QUEEN);
+    } else {
+      castling_rights &= ~(BLACK_CASTLE_KING | BLACK_CASTLE_QUEEN);
+    }
+    return;
+  }
+
+  if (piece.type == PIECE_ROOK) {
+    if (piece.color == WHITE) {
+      if (move.from == H1) {
+        castling_rights &= ~WHITE_CASTLE_KING;
+      } else if (move.from == A1) {
+        castling_rights &= ~WHITE_CASTLE_QUEEN;
+      }
+    } else {
+      if (move.from == H8) {
+        castling_rights &= ~BLACK_CASTLE_KING;
+      } else if (move.from == A8) {
+        castling_rights &= ~BLACK_CASTLE_QUEEN;
+      }
+    }
+  }
+
+  if (move.is_capture()) {
+    if (captured_square == H1) {
+      castling_rights &= ~WHITE_CASTLE_KING;
+    } else if (captured_square == A1) {
+      castling_rights &= ~WHITE_CASTLE_QUEEN;
+    } else if (captured_square == H8) {
+      castling_rights &= ~BLACK_CASTLE_KING;
+    } else if (captured_square == A8) {
+      castling_rights &= ~BLACK_CASTLE_QUEEN;
+    }
+  }
 }

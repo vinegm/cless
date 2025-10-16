@@ -3,18 +3,16 @@
 #include "chess_types.hpp"
 #include <optional>
 #include <string>
+#include <vector>
 
 struct UndoInfo {
-  Square from_square{};
-  Square to_square{};
-  Square captured_square{};
-
-  uint8_t moved_piece_encoded{};
+  Move move{};
   uint8_t captured_piece_encoded{};
 
   uint8_t castling_rights{};
   std::optional<Square> en_passant_square{};
   int halfmove_clock{};
+  int fullmove_counter{};
 };
 
 class Position {
@@ -37,14 +35,14 @@ public:
   void undo_move();
 
 private:
-  UndoInfo undo_info{};
+  std::vector<UndoInfo> undo_stack{};
 
   Square get_captured_square(const Move &move) const;
   void add_piece(PieceColor color, PieceType piece, Square square);
   void remove_piece(PieceColor color, PieceType piece, Square square);
   void pass_turn();
+  void update_castling_rights(const Move &move, const Piece &piece,
+                              Square captured_square);
 
-  void set_undo_info(Square from, Square to, Square captured_square,
-                     uint8_t moved_piece_encoded,
-                     uint8_t captured_piece_encoded);
+  void push_undo_info(const Move &move, uint8_t captured_piece_encoded);
 };

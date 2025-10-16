@@ -41,7 +41,7 @@ bool ClessEngine::validate_move(const Move &move) const {
 }
 
 bool ClessEngine::make_move(const Move &move) {
-  if (!validate_move(move)) return false;
+  if (validate_moves && !validate_move(move)) return false;
 
   legal_cache_valid = false;
   pos.make_move(move);
@@ -51,4 +51,37 @@ bool ClessEngine::make_move(const Move &move) {
 void ClessEngine::undo_move() {
   legal_cache_valid = false;
   pos.undo_move();
+}
+
+int ClessEngine::perft(int depth) {
+  if (depth == 0) return 1;
+
+  std::vector<Move> moves = get_legal_moves();
+  if (depth == 1) return moves.size();
+
+  int nodes = 0;
+  for (const Move &move : moves) {
+    make_move(move);
+    nodes += perft(depth - 1);
+    undo_move();
+  }
+
+  return nodes;
+}
+
+std::vector<std::pair<Move, int>> ClessEngine::perft_divide(int depth) {
+  std::vector<std::pair<Move, int>> results;
+
+  if (depth == 0) return results;
+
+  std::vector<Move> moves = get_legal_moves();
+
+  for (const Move &move : moves) {
+    make_move(move);
+    int nodes = (depth == 1) ? 1 : perft(depth - 1);
+    results.emplace_back(move, nodes);
+    undo_move();
+  }
+
+  return results;
 }

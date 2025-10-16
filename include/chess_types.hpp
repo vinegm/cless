@@ -24,7 +24,7 @@
 
 // clang-format off
 // Little-endian rank-file
-enum Square {
+enum Square : uint8_t {
   A8 = 7 * 8, B8, C8, D8, E8, F8, G8, H8,
   A7 = 6 * 8, B7, C7, D7, E7, F7, G7, H7,
   A6 = 5 * 8, B6, C6, D6, E6, F6, G6, H6,
@@ -36,7 +36,7 @@ enum Square {
 };
 // clang-format on
 
-enum CastlingRights {
+enum CastlingRights : uint8_t {
   WHITE_CASTLE_KING = 1,
   WHITE_CASTLE_QUEEN = 2,
   BLACK_CASTLE_KING = 4,
@@ -46,7 +46,7 @@ enum CastlingRights {
                  BLACK_CASTLE_QUEEN
 };
 
-enum PieceType {
+enum PieceType : uint8_t {
   PIECE_NONE,
   PIECE_PAWN,
   PIECE_KNIGHT,
@@ -56,9 +56,9 @@ enum PieceType {
   PIECE_KING
 };
 
-enum PieceColor { WHITE, BLACK, ANY };
+enum PieceColor : uint8_t { WHITE, BLACK, ANY };
 
-enum BitboardIndex {
+enum BitboardIndex : uint8_t {
   WHITE_PAWN,
   WHITE_KNIGHT,
   WHITE_BISHOP,
@@ -84,7 +84,13 @@ struct Piece {
   bool operator!=(const Piece &other) const { return !(*this == other); }
 };
 
-enum MoveType { NORMAL_MOVE, CAPTURE, EN_PASSANT, CASTLING, PROMOTION };
+enum MoveType : uint8_t {
+  NORMAL_MOVE = 0,
+  CAPTURE = 1 << 0,
+  CASTLING = 1 << 1,
+  PROMOTION = 1 << 2,
+  EN_PASSANT = 1 << 3
+};
 
 struct Move {
   Square from;
@@ -92,10 +98,10 @@ struct Move {
   MoveType type = NORMAL_MOVE;
   PieceType promotion_piece = PIECE_NONE;
 
-  bool is_capture() const { return type == CAPTURE || type == EN_PASSANT; }
-  bool is_castling() const { return type == CASTLING; }
-  bool is_promotion() const { return type == PROMOTION; }
-  bool is_en_passant() const { return type == EN_PASSANT; }
+  bool is_capture() const { return (type & (CAPTURE | EN_PASSANT)) != 0; }
+  bool is_promotion() const { return (type & PROMOTION) != 0; }
+  bool is_castling() const { return (type & CASTLING) != 0; }
+  bool is_en_passant() const { return (type & EN_PASSANT) != 0; }
 
   bool operator==(const Move &other) const {
     return from == other.from && to == other.to && type == other.type &&
