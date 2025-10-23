@@ -1,4 +1,5 @@
 #include "menu.hpp"
+
 #include <string>
 #include <vector>
 
@@ -15,20 +16,18 @@ void MenuWin::draw() {
 
   int title_lines_count = printw_title();
 
-  std::vector<std::string> instructions = {"Arrow keys/jk: move cursor",
-                                           "Space/Enter: select", "q: quit"};
-  int instructions_line =
-      title_lines_count + options_count + instructions_padding;
+  std::vector<std::string> instructions =
+      {"Arrow keys/jk: move cursor", "Space/Enter: select", "q: quit"};
+  int instructions_line = title_lines_count + options_count + instructions_padding;
 
   modifier_wrapper(parent_win, A_DIM, [&]() {
     for (int i = 0; i < instructions.size(); i++) {
-      mvwprintw_centered(parent_win, parent_width, instructions_line + i,
-                         instructions[i]);
+      mvwprintw_centered(parent_win, parent_width, instructions_line + i, instructions[i]);
     }
   });
 
-  WINDOW *menu_win_ptr = derwin(parent_win, options_count, parent_width,
-                                title_lines_count + menu_padding, 0);
+  WINDOW *menu_win_ptr =
+      derwin(parent_win, options_count, parent_width, title_lines_count + menu_padding, 0);
   menu_win = UniqueWindow(menu_win_ptr);
   printw_menu();
 
@@ -120,8 +119,7 @@ int MenuWin::printw_title() {
 
   int title_lines_count = titleLines.size();
   for (int i = 0; i < title_lines_count; i++) {
-    mvwprintw_centered(parent_win, parent_width, i + title_padding,
-                       titleLines[i]);
+    mvwprintw_centered(parent_win, parent_width, i + title_padding, titleLines[i]);
   }
 
   return title_lines_count;

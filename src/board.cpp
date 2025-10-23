@@ -1,5 +1,7 @@
 #include "board.hpp"
+
 #include "chess_types.hpp"
+
 #include <vector>
 
 #define title_padding line_padding
@@ -16,9 +18,8 @@ void BoardWin::draw() {
   box(parent_win, 0, 0);
 
   std::string title = "CLESS - Chess Game";
-  std::vector<std::string> instructions = {
-      "Arrow keys/hjkl: move cursor", "Space/Enter: select", "o: flip board",
-      "q: return to menu"};
+  std::vector<std::string> instructions =
+      {"Arrow keys/hjkl: move cursor", "Space/Enter: select", "o: flip board", "q: return to menu"};
 
   int instructions_count = instructions.size();
   int instructions_line = parent_height - line_padding - instructions_count;
@@ -29,14 +30,13 @@ void BoardWin::draw() {
 
   modifier_wrapper(parent_win, A_DIM, [&]() {
     for (size_t i = 0; i < instructions_count; i++) {
-      mvwprintw_centered(parent_win, parent_width, instructions_line + i,
-                         instructions[i]);
+      mvwprintw_centered(parent_win, parent_width, instructions_line + i, instructions[i]);
     }
   });
 
   int board_start_x = (parent_width - board_width) / 2;
-  WINDOW *board_win_ptr = derwin(parent_win, board_height, board_width,
-                                 board_padding, board_start_x);
+  WINDOW *board_win_ptr =
+      derwin(parent_win, board_height, board_width, board_padding, board_start_x);
   board_win = UniqueWindow(board_win_ptr);
 
   modifier_wrapper(board_win_ptr, A_DIM, [&]() {
@@ -61,12 +61,10 @@ void BoardWin::game_loop() {
 
   keypad(board_win_ptr, true);
   while (true) {
-    to_move_text = (game.to_move() == PieceColor::WHITE) ? "White to move"
-                                                         : "Black to move";
+    to_move_text = (game.to_move() == PieceColor::WHITE) ? "White to move" : "Black to move";
 
     modifier_wrapper(parent_win, A_BOLD, [&]() {
-      mvwprintw_centered(parent_win, parent_width, next_move_padding,
-                         to_move_text);
+      mvwprintw_centered(parent_win, parent_width, next_move_padding, to_move_text);
     });
 
     wrefresh(parent_win);
@@ -148,8 +146,7 @@ void BoardWin::printw_board() {
 
       char piece_char = get_piece_char_at(static_cast<Square>(square));
       modifier_wrapper(board_win_ptr, COLOR_PAIR(color_pair), [&]() {
-        mvwprintw(board_win_ptr, draw_rank + line_padding, draw_file * 2 + 1,
-                  "%c ", piece_char);
+        mvwprintw(board_win_ptr, draw_rank + line_padding, draw_file * 2 + 1, "%c ", piece_char);
       });
     }
   }
@@ -166,16 +163,14 @@ void BoardWin::printw_rank_labels() {
     case BOARD_ORIENTATION_WHITE:
       for (int i = 0; i < 8; i++) {
         mvwprintw(board_win_ptr, i + line_padding, 0, "%d", 8 - i);
-        mvwprintw(board_win_ptr, i + line_padding, board_width - 1, "%d",
-                  8 - i);
+        mvwprintw(board_win_ptr, i + line_padding, board_width - 1, "%d", 8 - i);
       }
       break;
 
     case BOARD_ORIENTATION_BLACK:
       for (int i = 0; i < 8; i++) {
         mvwprintw(board_win_ptr, i + line_padding, 0, "%d", i + 1);
-        mvwprintw(board_win_ptr, i + line_padding, board_width - 1, "%d",
-                  i + 1);
+        mvwprintw(board_win_ptr, i + line_padding, board_width - 1, "%d", i + 1);
       }
       break;
   }
@@ -227,8 +222,7 @@ int BoardWin::get_square_color(int square) {
   if (square == selected_square) return SELECTED_SQUARE;
 
   if (selected_square.has_value()) {
-    MoveList legal_moves =
-        game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
+    MoveList legal_moves = game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
     for (int i = 0; i < legal_moves.count; i++) {
       if (legal_moves[i].to == square) return LEGAL_MOVE_SQUARE;
     }
@@ -257,8 +251,7 @@ void BoardWin::handle_piece_selection() {
   }
 
   // Make move
-  MoveList legal_moves =
-      game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
+  MoveList legal_moves = game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
 
   Move *found_move = nullptr;
   for (int i = 0; i < legal_moves.count; i++) {

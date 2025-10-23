@@ -2,6 +2,7 @@
 #include "menu.hpp"
 #include "size_warning.hpp"
 #include "win_handler.hpp"
+
 #include <ncurses.h>
 #include <sys/types.h>
 

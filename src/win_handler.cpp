@@ -22,15 +22,12 @@ void WinHandler::run(std::string start_window) {
 }
 
 void WinHandler::show_window(std::string name) {
-  if (windows.find(name) == windows.end())
-    throw std::out_of_range("Invalid window: " + name);
+  if (windows.find(name) == windows.end()) throw std::out_of_range("Invalid window: " + name);
 
   windows.at(name)->draw();
 }
 
-void WinHandler::refresh_win() {
-  main_win = create_centered_window(WINDOW_HEIGHT, WINDOW_WIDTH);
-}
+void WinHandler::refresh_win() { main_win = create_centered_window(WINDOW_HEIGHT, WINDOW_WIDTH); }
 
 bool WinHandler::check_terminal_size() {
   int scr_height, scr_width;

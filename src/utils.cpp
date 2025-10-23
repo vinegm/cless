@@ -1,4 +1,5 @@
 #include "utils.hpp"
+
 #include <ncurses.h>
 #include <string>
 
@@ -32,8 +33,7 @@ UniqueWindow create_centered_window(int height, int width) {
  * @param modifier
  * @param callaback
  */
-void modifier_wrapper(WINDOW *win, unsigned int modifier,
-                      std::function<void()> callaback) {
+void modifier_wrapper(WINDOW *win, unsigned int modifier, std::function<void()> callaback) {
   wattron(win, modifier);
   callaback();
   wattroff(win, modifier);
@@ -47,8 +47,7 @@ void modifier_wrapper(WINDOW *win, unsigned int modifier,
  * @param line The line number to print the string on.
  * @param msg The formatted string to print.
  */
-void mvwprintw_centered(WINDOW *win, int win_width, int line,
-                        const std::wstring msg) {
+void mvwprintw_centered(WINDOW *win, int win_width, int line, const std::wstring msg) {
   int str_width = wcswidth(msg.c_str(), msg.size());
   if (str_width < 0) str_width = 0;
 
@@ -59,8 +58,7 @@ void mvwprintw_centered(WINDOW *win, int win_width, int line,
 }
 
 // --- UTF-8 string version (for std::string) ---
-void mvwprintw_centered(WINDOW *win, int win_width, int line,
-                        const std::string msg) {
+void mvwprintw_centered(WINDOW *win, int win_width, int line, const std::string msg) {
   std::wstring wmsg(msg.begin(), msg.end()); // Convert to wide string
   mvwprintw_centered(win, win_width, line, wmsg);
 }

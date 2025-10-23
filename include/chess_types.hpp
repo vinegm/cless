@@ -36,7 +36,12 @@ enum Square : uint8_t {
 };
 // clang-format on
 
-enum MoveDirection : int8_t { NORTH = 8, SOUTH = -8, EAST = 1, WEST = -1 };
+enum MoveDirection : int8_t {
+  NORTH = 8,
+  SOUTH = -8,
+  EAST = 1,
+  WEST = -1
+};
 
 enum CastlingRights : uint8_t {
   WHITE_CASTLE_KING = 1,
@@ -44,8 +49,7 @@ enum CastlingRights : uint8_t {
   BLACK_CASTLE_KING = 4,
   BLACK_CASTLE_QUEEN = 8,
 
-  ANY_CASTLING = WHITE_CASTLE_KING | WHITE_CASTLE_QUEEN | BLACK_CASTLE_KING |
-                 BLACK_CASTLE_QUEEN
+  ANY_CASTLING = WHITE_CASTLE_KING | WHITE_CASTLE_QUEEN | BLACK_CASTLE_KING | BLACK_CASTLE_QUEEN
 };
 
 enum PieceType : uint8_t {
@@ -58,7 +62,11 @@ enum PieceType : uint8_t {
   PIECE_KING
 };
 
-enum PieceColor : uint8_t { WHITE, BLACK, ANY };
+enum PieceColor : uint8_t {
+  WHITE,
+  BLACK,
+  ANY
+};
 
 enum BitboardIndex : uint8_t {
   WHITE_PAWN,
@@ -79,9 +87,7 @@ struct Piece {
   PieceColor color;
   PieceType type;
 
-  bool operator==(const Piece &other) const {
-    return color == other.color && type == other.type;
-  }
+  bool operator==(const Piece &other) const { return color == other.color && type == other.type; }
 
   bool operator!=(const Piece &other) const { return !(*this == other); }
 };
@@ -106,8 +112,8 @@ struct Move {
   bool is_en_passant() const { return (type & EN_PASSANT) != 0; }
 
   bool operator==(const Move &other) const {
-    return from == other.from && to == other.to && type == other.type &&
-           promotion_piece == other.promotion_piece;
+    return from == other.from && to == other.to && type == other.type
+           && promotion_piece == other.promotion_piece;
   }
 
   bool operator!=(const Move &other) const { return !(*this == other); }
@@ -124,13 +130,9 @@ constexpr BitboardIndex bitboard_index(PieceColor color, PieceType type) {
   return static_cast<BitboardIndex>((color * 6) + type - 1);
 }
 
-constexpr PieceColor opposite_color(PieceColor color) {
-  return (color == WHITE) ? BLACK : WHITE;
-}
+constexpr PieceColor opposite_color(PieceColor color) { return (color == WHITE) ? BLACK : WHITE; }
 
-constexpr uint8_t encode_piece(PieceColor color, PieceType type) {
-  return (color << 7) | type;
-}
+constexpr uint8_t encode_piece(PieceColor color, PieceType type) { return (color << 7) | type; }
 
 constexpr Piece decode_piece(uint8_t code) {
   PieceColor color = static_cast<PieceColor>(code >> 7);
@@ -138,13 +140,9 @@ constexpr Piece decode_piece(uint8_t code) {
   return Piece{color, type};
 }
 
-constexpr PieceColor decode_color(uint8_t code) {
-  return static_cast<PieceColor>(code >> 7);
-}
+constexpr PieceColor decode_color(uint8_t code) { return static_cast<PieceColor>(code >> 7); }
 
-constexpr PieceType decode_type(uint8_t code) {
-  return static_cast<PieceType>(code & 0x7F);
-}
+constexpr PieceType decode_type(uint8_t code) { return static_cast<PieceType>(code & 0x7F); }
 
 /**
  * @brief Pop the least significant bit from a bitboard and return its index.
@@ -172,6 +170,4 @@ constexpr int lsb_index(uint64_t bitboard) { return __builtin_ctzll(bitboard); }
  * @param bitboard
  * @return int
  */
-constexpr int count_bits(uint64_t bitboard) {
-  return __builtin_popcountll(bitboard);
-}
+constexpr int count_bits(uint64_t bitboard) { return __builtin_popcountll(bitboard); }

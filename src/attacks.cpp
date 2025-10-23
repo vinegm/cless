@@ -1,8 +1,7 @@
 
 #include "attacks.hpp"
 
-uint64_t scan_attacks(int square, uint64_t occupancy, int rank_dir,
-                      int file_dir) {
+uint64_t scan_attacks(int square, uint64_t occupancy, int rank_dir, int file_dir) {
   uint64_t attacks = 0ULL;
   int piece_rank = square_rank(square);
   int piece_file = square_file(square);

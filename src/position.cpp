@@ -1,14 +1,15 @@
 #include "position.hpp"
+
 #include "chess_types.hpp"
+
 #include <sstream>
 
 Position::Position(const std::string &fen) : bitboards{}, lookup_table{} {
   std::istringstream fen_stream(fen);
-  std::string piece_placement, active_color, castling, en_passant, halfmove_str,
-      fullmove_str;
+  std::string piece_placement, active_color, castling, en_passant, halfmove_str, fullmove_str;
 
-  fen_stream >> piece_placement >> active_color >> castling >> en_passant >>
-      halfmove_str >> fullmove_str;
+  fen_stream >> piece_placement >> active_color >> castling >> en_passant >> halfmove_str
+      >> fullmove_str;
 
   // Piece placement
   int rank = 7, file = 0;
@@ -37,8 +38,7 @@ Position::Position(const std::string &fen) : bitboards{}, lookup_table{} {
       default: type = PIECE_NONE; break;
     }
 
-    if (type != PIECE_NONE)
-      add_piece(color, type, indexes_to_square(rank, file));
+    if (type != PIECE_NONE) add_piece(color, type, indexes_to_square(rank, file));
 
     file++;
   }
@@ -178,8 +178,7 @@ void Position::make_move(const Move &move) {
 
   push_undo_info(move, captured_piece_encoded);
 
-  if (castling_rights != 0)
-    update_castling_rights(move, piece, captured_square);
+  if (castling_rights != 0) update_castling_rights(move, piece, captured_square);
 
   en_passant_square.reset();
   if (piece.type == PIECE_PAWN || move.is_capture()) {
@@ -193,10 +192,8 @@ void Position::make_move(const Move &move) {
       int to_file = square_file(move.to);
       int from_rank = square_rank(move.from);
       int to_rank = square_rank(move.to);
-      int en_passant_rank =
-          (from_rank + to_rank) / 2; // Square between from and to
-      en_passant_square =
-          static_cast<Square>(indexes_to_square(en_passant_rank, to_file));
+      int en_passant_rank = (from_rank + to_rank) / 2; // Square between from and to
+      en_passant_square = static_cast<Square>(indexes_to_square(en_passant_rank, to_file));
     }
   }
 
@@ -289,8 +286,7 @@ Square Position::get_captured_square(const Move &move) const {
   return move.to;
 }
 
-void Position::push_undo_info(const Move &move,
-                              uint8_t captured_piece_encoded) {
+void Position::push_undo_info(const Move &move, uint8_t captured_piece_encoded) {
   UndoInfo undo_info;
   undo_info.move = move;
   undo_info.captured_piece_encoded = captured_piece_encoded;
@@ -303,8 +299,11 @@ void Position::push_undo_info(const Move &move,
   undo_stack.push_back(undo_info);
 }
 
-void Position::update_castling_rights(const Move &move, const Piece &piece,
-                                      Square captured_square) {
+void Position::update_castling_rights(
+    const Move &move,
+    const Piece &piece,
+    Square captured_square
+) {
   if (piece.type == PIECE_KING) {
     if (piece.color == WHITE) {
       castling_rights &= ~(WHITE_CASTLE_KING | WHITE_CASTLE_QUEEN);

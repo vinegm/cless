@@ -1,6 +1,8 @@
 #include "engine.hpp"
+
 #include "chess_types.hpp"
 #include "position.hpp"
+
 #include <algorithm>
 #include <vector>
 
@@ -21,9 +23,7 @@ MoveList ClessEngine::get_legal_moves_from(Square square) const {
 
   MoveList filtered_moves;
   for (int i = 0; i < legal_moves.count; i++) {
-    if (legal_moves.moves[i].from == square) {
-      filtered_moves.add_move(legal_moves.moves[i]);
-    }
+    if (legal_moves.moves[i].from == square) { filtered_moves.add_move(legal_moves.moves[i]); }
   }
 
   return filtered_moves;
@@ -35,8 +35,7 @@ bool ClessEngine::validate_move(const Move &move) const {
     legal_cache_valid = true;
   }
 
-  return std::find(legal_moves.begin(), legal_moves.end(), move) !=
-         legal_moves.end();
+  return std::find(legal_moves.begin(), legal_moves.end(), move) != legal_moves.end();
 }
 
 bool ClessEngine::make_move(const Move &move) {

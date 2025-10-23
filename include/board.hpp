@@ -2,11 +2,15 @@
 
 #include "engine.hpp"
 #include "win_handler.hpp"
+
 #include <cstdint>
 #include <ncurses.h>
 #include <optional>
 
-enum BoardOrientation { BOARD_ORIENTATION_WHITE, BOARD_ORIENTATION_BLACK };
+enum BoardOrientation {
+  BOARD_ORIENTATION_WHITE,
+  BOARD_ORIENTATION_BLACK
+};
 
 enum SquareColor {
   WHITE_SQUARE = 1,

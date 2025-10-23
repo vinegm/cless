@@ -1,5 +1,6 @@
 #include "chess_types.hpp"
 #include "engine.hpp"
+
 #include <criterion/criterion.h>
 #include <string>
 
@@ -47,45 +48,62 @@ std::string piece_to_string(const Piece &piece) {
  * @param expected
  * @param after_move
  */
-void check_positions(ClessEngine &board, const ExpectedResult &expected,
-                     bool after_move) {
+void check_positions(ClessEngine &board, const ExpectedResult &expected, bool after_move) {
   Piece piece_at_from = board.get_piece_at(expected.move.from);
   Piece piece_at_to = board.get_piece_at(expected.move.to);
   const char *context = after_move ? "after move" : "before move";
 
   if (after_move && expected.result) {
     Piece empty_piece = {WHITE, PIECE_NONE};
-    cr_assert_eq(piece_at_from, empty_piece,
-                 "Piece at 'from' mismatch %s: got %s, expected Empty", context,
-                 piece_to_string(piece_at_from).c_str());
+    cr_assert_eq(
+        piece_at_from,
+        empty_piece,
+        "Piece at 'from' mismatch %s: got %s, expected Empty",
+        context,
+        piece_to_string(piece_at_from).c_str()
+    );
 
-    cr_assert_eq(piece_at_to, expected.moving_piece,
-                 "Piece at 'to' mismatch %s: got %s, expected %s", context,
-                 piece_to_string(piece_at_to).c_str(),
-                 piece_to_string(expected.moving_piece).c_str());
+    cr_assert_eq(
+        piece_at_to,
+        expected.moving_piece,
+        "Piece at 'to' mismatch %s: got %s, expected %s",
+        context,
+        piece_to_string(piece_at_to).c_str(),
+        piece_to_string(expected.moving_piece).c_str()
+    );
   } else if (!after_move) {
-    cr_assert_eq(piece_at_from, expected.moving_piece,
-                 "Piece at 'from' mismatch %s: got %s, expected %s", context,
-                 piece_to_string(piece_at_from).c_str(),
-                 piece_to_string(expected.moving_piece).c_str());
+    cr_assert_eq(
+        piece_at_from,
+        expected.moving_piece,
+        "Piece at 'from' mismatch %s: got %s, expected %s",
+        context,
+        piece_to_string(piece_at_from).c_str(),
+        piece_to_string(expected.moving_piece).c_str()
+    );
   }
 
-  if (expected.capture_square.has_value() &&
-      expected.capture_square != expected.move.to &&
-      expected.piece_at_capture.has_value()) {
-    Piece piece_at_capture =
-        board.get_piece_at(expected.capture_square.value());
+  if (expected.capture_square.has_value() && expected.capture_square != expected.move.to
+      && expected.piece_at_capture.has_value()) {
+    Piece piece_at_capture = board.get_piece_at(expected.capture_square.value());
 
     if (after_move && expected.result) {
       Piece empty_piece = {WHITE, PIECE_NONE};
-      cr_assert_eq(piece_at_capture, empty_piece,
-                   "Piece at 'capture' mismatch %s: got %s, expected Empty",
-                   context, piece_to_string(piece_at_capture).c_str());
+      cr_assert_eq(
+          piece_at_capture,
+          empty_piece,
+          "Piece at 'capture' mismatch %s: got %s, expected Empty",
+          context,
+          piece_to_string(piece_at_capture).c_str()
+      );
     } else if (!after_move) {
-      cr_assert_eq(piece_at_capture, expected.piece_at_capture.value(),
-                   "Piece at 'capture' mismatch %s: got %s, expected %s",
-                   context, piece_to_string(piece_at_capture).c_str(),
-                   piece_to_string(expected.piece_at_capture.value()).c_str());
+      cr_assert_eq(
+          piece_at_capture,
+          expected.piece_at_capture.value(),
+          "Piece at 'capture' mismatch %s: got %s, expected %s",
+          context,
+          piece_to_string(piece_at_capture).c_str(),
+          piece_to_string(expected.piece_at_capture.value()).c_str()
+      );
     }
   }
 }
@@ -102,20 +120,24 @@ void check_case(ExpectedResult &expected) {
 
   bool result = board.make_move(expected.move);
   if (expected.fen_after_move.has_value()) {
-    cr_assert_eq(board.get_fen(), expected.fen_after_move.value(),
-                 "FEN mismatch after making move");
+    cr_assert_eq(
+        board.get_fen(),
+        expected.fen_after_move.value(),
+        "FEN mismatch after making move"
+    );
   }
   cr_assert_eq(result, expected.result, "Move result mismatch");
-  cr_assert_eq(board.to_move(), expected.next_turn,
-               "Expected turn to switch correctly after move");
+  cr_assert_eq(board.to_move(), expected.next_turn, "Expected turn to switch correctly after move");
   check_positions(board, expected, true);
 
   if (!expected.result) return;
   board.undo_move();
-  cr_assert_neq(board.to_move(), expected.next_turn,
-                "Expected turn to switch correctly after undoing move");
-  cr_assert_eq(board.get_fen(), expected.initial_fen,
-               "FEN mismatch after undoing move");
+  cr_assert_neq(
+      board.to_move(),
+      expected.next_turn,
+      "Expected turn to switch correctly after undoing move"
+  );
+  cr_assert_eq(board.get_fen(), expected.initial_fen, "FEN mismatch after undoing move");
   check_positions(board, expected, false);
 }
 
@@ -132,8 +154,7 @@ Test(unique_moves, e4) {
 
 Test(unique_moves, dxe6_en_passant) {
   ExpectedResult expected = {
-      .initial_fen =
-          "rnbqkbnr/ppp2ppp/8/3Pp3/8/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1",
+      .initial_fen = "rnbqkbnr/ppp2ppp/8/3Pp3/8/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1",
       .result = true,
       .next_turn = BLACK,
       .moving_piece = {WHITE, PIECE_PAWN},
@@ -147,8 +168,7 @@ Test(unique_moves, dxe6_en_passant) {
 
 Test(unique_moves, dxe6_invalid_en_passant) {
   ExpectedResult expected = {
-      .initial_fen =
-          "rnbqkbnr/ppp2ppp/8/3Pp3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+      .initial_fen = "rnbqkbnr/ppp2ppp/8/3Pp3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
       .result = false,
       .next_turn = WHITE,
       .moving_piece = {WHITE, PIECE_PAWN},

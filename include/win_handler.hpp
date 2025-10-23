@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils.hpp"
+
 #include <ncurses.h>
 #include <stdexcept>
 #include <string>
@@ -16,9 +17,7 @@ class BaseWindow {
 public:
   void set_handler(WinHandler *handler) { this->handler = handler; }
 
-  virtual void draw() {
-    throw std::runtime_error("BaseWindow::draw() not implemented!");
-  }
+  virtual void draw() { throw std::runtime_error("BaseWindow::draw() not implemented!"); }
 
 protected:
   WinHandler *handler;
@@ -38,22 +37,19 @@ public:
   const int exit_event = EXIT_EVENT;
   const int resize_event = RESIZE_EVENT;
 
-  WinHandler(int height, int width, const std::string &name)
-      : WinHandler(height, width) {
+  WinHandler(int height, int width, const std::string &name) : WinHandler(height, width) {
     size_warning_win_name = name;
   }
-  WinHandler(int height, int width)
-      : WINDOW_HEIGHT(height), WINDOW_WIDTH(width) {
-    refresh_win();
-  }
+  WinHandler(int height, int width) : WINDOW_HEIGHT(height), WINDOW_WIDTH(width) { refresh_win(); }
 
-  template <typename NewWin> void add_window(const std::string &name) {
+  template<typename NewWin>
+  void add_window(const std::string &name) {
     auto window = std::make_unique<NewWin>();
     window->set_handler(this);
     windows.emplace(name, std::move(window));
   }
 
-  template <typename NewWin, typename Arg>
+  template<typename NewWin, typename Arg>
   void add_window(const std::string &name, const Arg &arg) {
     auto window = std::make_unique<NewWin>(arg);
     window->set_handler(this);

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "chess_types.hpp"
+
 #include <array>
 
 constexpr std::array<std::array<uint64_t, 64>, 2> init_pawn_attacks() {
-  std::array<std::array<uint64_t, 64>, 2>
-      pawn_attacks{}; // [PieceColor][Square]
+  std::array<std::array<uint64_t, 64>, 2> pawn_attacks{}; // [PieceColor][Square]
   const uint64_t NOT_FILE_A = ~FILE_A;
   const uint64_t NOT_FILE_H = ~FILE_H;
 
@@ -60,10 +60,8 @@ constexpr std::array<uint64_t, 64> init_king_attacks() {
 
     if (square_bit & NOT_FILE_A) attacks |= square_bit >> 1;
     if (square_bit & NOT_FILE_H) attacks |= square_bit << 1;
-    if (square_bit & NOT_FILE_A)
-      attacks |= (square_bit << 8) >> 1 | (square_bit >> 8) >> 1;
-    if (square_bit & NOT_FILE_H)
-      attacks |= (square_bit << 8) << 1 | (square_bit >> 8) << 1;
+    if (square_bit & NOT_FILE_A) attacks |= (square_bit << 8) >> 1 | (square_bit >> 8) >> 1;
+    if (square_bit & NOT_FILE_H) attacks |= (square_bit << 8) << 1 | (square_bit >> 8) << 1;
     attacks |= (square_bit << 8) | (square_bit >> 8);
 
     king_attacks[square] = attacks;
