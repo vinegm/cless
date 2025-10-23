@@ -12,15 +12,15 @@
 #define RANK_8 (RANK_1 << (8 * 7))
 
 #define FILE_A 0x0101010101010101ULL
-#define FILE_B 0x0202020202020202ULL
-#define FILE_C 0x0404040404040404ULL
-#define FILE_D 0x0808080808080808ULL
-#define FILE_E 0x1010101010101010ULL
-#define FILE_F 0x2020202020202020ULL
-#define FILE_G 0x4040404040404040ULL
-#define FILE_H 0x8080808080808080ULL
+#define FILE_B (FILE_A << 1)
+#define FILE_C (FILE_A << 2)
+#define FILE_D (FILE_A << 3)
+#define FILE_E (FILE_A << 4)
+#define FILE_F (FILE_A << 5)
+#define FILE_G (FILE_A << 6)
+#define FILE_H (FILE_A << 7)
 
-#define MAX_POSSIBLE_LEGAL_MOVES 218
+#define MAX_POSSIBLE_LEGAL_MOVES 256
 
 // clang-format off
 // Little-endian rank-file
@@ -35,6 +35,8 @@ enum Square : uint8_t {
   A1 = 0 * 8, B1, C1, D1, E1, F1, G1, H1,
 };
 // clang-format on
+
+enum MoveDirection : int8_t { NORTH = 8, SOUTH = -8, EAST = 1, WEST = -1 };
 
 enum CastlingRights : uint8_t {
   WHITE_CASTLE_KING = 1,
@@ -130,7 +132,7 @@ constexpr uint8_t encode_piece(PieceColor color, PieceType type) {
   return (color << 7) | type;
 }
 
-inline Piece decode_piece(uint8_t code) {
+constexpr Piece decode_piece(uint8_t code) {
   PieceColor color = static_cast<PieceColor>(code >> 7);
   PieceType type = static_cast<PieceType>(code & 0x7F);
   return Piece{color, type};

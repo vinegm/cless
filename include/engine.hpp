@@ -20,8 +20,8 @@ public:
   PieceColor to_move() const { return pos.to_move; }
   Piece get_piece_at(Square square) { return pos.get_piece_at(square); }
 
-  std::vector<Move> get_legal_moves() const;
-  std::vector<Move> get_legal_moves_from(Square square) const;
+  MoveList get_legal_moves() const;
+  MoveList get_legal_moves_from(Square square) const;
 
   bool make_move(const Move &move);
   void undo_move();
@@ -35,5 +35,5 @@ private:
 
   bool validate_move(const Move &move) const;
   mutable bool legal_cache_valid = false;
-  mutable std::vector<Move> legal_moves;
+  mutable MoveList legal_moves;
 };

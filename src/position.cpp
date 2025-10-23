@@ -164,16 +164,6 @@ Piece Position::get_piece_at(Square square) {
   return Piece{color, type};
 }
 
-Square Position::get_captured_square(const Move &move) const {
-  if (move.is_en_passant()) {
-    int to_file = square_file(move.to);
-    int from_rank = square_rank(move.from);
-    return indexes_to_square(from_rank, to_file);
-  }
-
-  return move.to;
-}
-
 void Position::make_move(const Move &move) {
   uint8_t encoded_piece = lookup_table[move.from];
   Piece piece = decode_piece(encoded_piece);
@@ -202,8 +192,11 @@ void Position::make_move(const Move &move) {
     if (abs(square_rank(move.to) - square_rank(move.from)) == 2) {
       int to_file = square_file(move.to);
       int from_rank = square_rank(move.from);
+      int to_rank = square_rank(move.to);
+      int en_passant_rank =
+          (from_rank + to_rank) / 2; // Square between from and to
       en_passant_square =
-          static_cast<Square>(indexes_to_square(from_rank, to_file));
+          static_cast<Square>(indexes_to_square(en_passant_rank, to_file));
     }
   }
 
@@ -211,20 +204,27 @@ void Position::make_move(const Move &move) {
   if (move.is_castling()) {
     Square rook_from, rook_to;
     if (move.to > move.from) {
-      rook_from = static_cast<Square>(move.from + 3);
-      rook_to = static_cast<Square>(move.from + 1);
+      rook_from = static_cast<Square>(move.from + 3 * EAST);
+      rook_to = static_cast<Square>(move.from + EAST);
     } else {
-      rook_from = static_cast<Square>(move.from - 4);
-      rook_to = static_cast<Square>(move.from - 1);
+      rook_from = static_cast<Square>(move.from + 4 * WEST);
+      rook_to = static_cast<Square>(move.from + WEST);
     }
+
     uint8_t rook_encoded = lookup_table[rook_from];
     Piece rook = decode_piece(rook_encoded);
+
     remove_piece(rook.color, rook.type, rook_from);
     add_piece(rook.color, rook.type, rook_to);
   }
 
   remove_piece(piece.color, piece.type, move.from);
-  add_piece(piece.color, piece.type, move.to);
+  if (move.is_promotion()) {
+    add_piece(piece.color, move.promotion_piece, move.to);
+  } else {
+    add_piece(piece.color, piece.type, move.to);
+  }
+
   pass_turn();
 }
 
@@ -244,7 +244,12 @@ void Position::undo_move() {
   Piece captured_piece = decode_piece(undo_info.captured_piece_encoded);
 
   remove_piece(moved_piece.color, moved_piece.type, to);
-  add_piece(moved_piece.color, moved_piece.type, from);
+
+  if (move.is_promotion()) {
+    add_piece(moved_piece.color, PIECE_PAWN, from);
+  } else {
+    add_piece(moved_piece.color, moved_piece.type, from);
+  }
 
   if (captured_piece.type != PIECE_NONE)
     add_piece(captured_piece.color, captured_piece.type, captured_square);
@@ -252,11 +257,11 @@ void Position::undo_move() {
   if (move.is_castling()) {
     Square rook_from, rook_to;
     if (to > from) {
-      rook_from = static_cast<Square>(from + 3);
-      rook_to = static_cast<Square>(from + 1);
+      rook_from = static_cast<Square>(from + 3 * EAST);
+      rook_to = static_cast<Square>(from + EAST);
     } else {
-      rook_from = static_cast<Square>(from - 4);
-      rook_to = static_cast<Square>(from - 1);
+      rook_from = static_cast<Square>(from + 4 * WEST);
+      rook_to = static_cast<Square>(from + WEST);
     }
 
     uint8_t rook_encoded = lookup_table[rook_to];
@@ -274,29 +279,14 @@ void Position::undo_move() {
   to_move = opposite_color(to_move);
 }
 
-void Position::add_piece(PieceColor color, PieceType piece, Square square) {
-  uint64_t square_bit = square_to_bit(square);
-  bitboards[bitboard_index(color, piece)] |= square_bit;
-  occupancy[color] |= square_bit;
-  occupancy[ANY] |= square_bit;
+Square Position::get_captured_square(const Move &move) const {
+  if (move.is_en_passant()) {
+    int to_file = square_file(move.to);
+    int from_rank = square_rank(move.from);
+    return indexes_to_square(from_rank, to_file);
+  }
 
-  lookup_table[square] = encode_piece(color, piece);
-}
-
-void Position::remove_piece(PieceColor color, PieceType piece, Square square) {
-  uint64_t square_bit = square_to_bit(square);
-  bitboards[bitboard_index(color, piece)] &= ~square_bit;
-  occupancy[color] &= ~square_bit;
-  occupancy[ANY] &= ~square_bit;
-
-  lookup_table[square] = 0;
-}
-
-void Position::pass_turn() {
-  bool black_played = to_move == BLACK;
-  if (black_played) fullmove_counter++;
-
-  to_move = opposite_color(to_move);
+  return move.to;
 }
 
 void Position::push_undo_info(const Move &move,
@@ -351,4 +341,29 @@ void Position::update_castling_rights(const Move &move, const Piece &piece,
       castling_rights &= ~BLACK_CASTLE_QUEEN;
     }
   }
+}
+
+void Position::add_piece(PieceColor color, PieceType piece, Square square) {
+  uint64_t square_bit = square_to_bit(square);
+  bitboards[bitboard_index(color, piece)] |= square_bit;
+  occupancy[color] |= square_bit;
+  occupancy[ANY] |= square_bit;
+
+  lookup_table[square] = encode_piece(color, piece);
+}
+
+void Position::remove_piece(PieceColor color, PieceType piece, Square square) {
+  uint64_t square_bit = square_to_bit(square);
+  bitboards[bitboard_index(color, piece)] &= ~square_bit;
+  occupancy[color] &= ~square_bit;
+  occupancy[ANY] &= ~square_bit;
+
+  lookup_table[square] = 0;
+}
+
+void Position::pass_turn() {
+  bool black_played = to_move == BLACK;
+  if (black_played) fullmove_counter++;
+
+  to_move = opposite_color(to_move);
 }

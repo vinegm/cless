@@ -80,13 +80,13 @@ void BoardWin::game_loop() {
 
       case 'k':
       case KEY_UP:
-        highlighted_square += 8 * orientation_mod;
+        highlighted_square += NORTH * orientation_mod;
         highlighted_square %= 64;
         break;
 
       case 'j':
       case KEY_DOWN:
-        highlighted_square -= 8 * orientation_mod;
+        highlighted_square -= NORTH * orientation_mod;
         highlighted_square %= 64;
         break;
 
@@ -100,7 +100,7 @@ void BoardWin::game_loop() {
           break;
         }
 
-        highlighted_square -= orientation_mod;
+        highlighted_square -= EAST * orientation_mod;
         break;
       }
 
@@ -114,7 +114,7 @@ void BoardWin::game_loop() {
           break;
         }
 
-        highlighted_square += orientation_mod;
+        highlighted_square += EAST * orientation_mod;
         break;
       }
 
@@ -227,10 +227,10 @@ int BoardWin::get_square_color(int square) {
   if (square == selected_square) return SELECTED_SQUARE;
 
   if (selected_square.has_value()) {
-    std::vector<Move> legal_moves =
+    MoveList legal_moves =
         game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
-    for (const Move &move : legal_moves) {
-      if (move.to == square) return LEGAL_MOVE_SQUARE;
+    for (int i = 0; i < legal_moves.count; i++) {
+      if (legal_moves[i].to == square) return LEGAL_MOVE_SQUARE;
     }
   }
 
@@ -256,22 +256,20 @@ void BoardWin::handle_piece_selection() {
     return;
   }
 
-  // Make move - find the actual legal move from move generator
-  std::vector<Move> legal_moves = 
+  // Make move
+  MoveList legal_moves =
       game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
-  
-  Move* found_move = nullptr;
-  for (Move& move : legal_moves) {
-    if (move.to == highlighted_square) {
-      found_move = &move;
+
+  Move *found_move = nullptr;
+  for (int i = 0; i < legal_moves.count; i++) {
+    if (legal_moves[i].to == highlighted_square) {
+      found_move = &legal_moves[i];
       break;
     }
   }
-  
+
   bool move_successful = false;
-  if (found_move) {
-    move_successful = game.make_move(*found_move);
-  }
+  if (found_move) { move_successful = game.make_move(*found_move); }
 
   // Deselect after move
   if (move_successful) {

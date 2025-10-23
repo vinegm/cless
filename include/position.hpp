@@ -38,11 +38,10 @@ private:
   std::vector<UndoInfo> undo_stack{};
 
   Square get_captured_square(const Move &move) const;
+  void push_undo_info(const Move &move, uint8_t captured_piece_encoded);
+  void update_castling_rights(const Move &move, const Piece &piece,
+                              Square captured_square);
   void add_piece(PieceColor color, PieceType piece, Square square);
   void remove_piece(PieceColor color, PieceType piece, Square square);
   void pass_turn();
-  void update_castling_rights(const Move &move, const Piece &piece,
-                              Square captured_square);
-
-  void push_undo_info(const Move &move, uint8_t captured_piece_encoded);
 };

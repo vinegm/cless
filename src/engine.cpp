@@ -2,8 +2,9 @@
 #include "chess_types.hpp"
 #include "position.hpp"
 #include <algorithm>
+#include <vector>
 
-std::vector<Move> ClessEngine::get_legal_moves() const {
+MoveList ClessEngine::get_legal_moves() const {
   if (legal_cache_valid) return legal_moves;
 
   legal_moves = generator.generate_legal_moves(pos);
@@ -12,22 +13,20 @@ std::vector<Move> ClessEngine::get_legal_moves() const {
   return legal_moves;
 };
 
-std::vector<Move> ClessEngine::get_legal_moves_from(Square square) const {
+MoveList ClessEngine::get_legal_moves_from(Square square) const {
   if (!legal_cache_valid) {
     legal_moves = generator.generate_legal_moves(pos);
     legal_cache_valid = true;
   }
-  std::vector<Move> all_moves = legal_moves;
 
-  for (auto it = all_moves.begin(); it != all_moves.end();) {
-    if (it->from != square) {
-      it = all_moves.erase(it);
-    } else {
-      ++it;
+  MoveList filtered_moves;
+  for (int i = 0; i < legal_moves.count; i++) {
+    if (legal_moves.moves[i].from == square) {
+      filtered_moves.add_move(legal_moves.moves[i]);
     }
   }
 
-  return all_moves;
+  return filtered_moves;
 };
 
 bool ClessEngine::validate_move(const Move &move) const {
@@ -56,12 +55,12 @@ void ClessEngine::undo_move() {
 int ClessEngine::perft(int depth) {
   if (depth == 0) return 1;
 
-  std::vector<Move> moves = get_legal_moves();
-  if (depth == 1) return moves.size();
+  MoveList moves = get_legal_moves();
+  if (depth == 1) return moves.count;
 
   int nodes = 0;
-  for (const Move &move : moves) {
-    make_move(move);
+  for (int i = 0; i < moves.count; i++) {
+    make_move(moves[i]);
     nodes += perft(depth - 1);
     undo_move();
   }
@@ -74,12 +73,12 @@ std::vector<std::pair<Move, int>> ClessEngine::perft_divide(int depth) {
 
   if (depth == 0) return results;
 
-  std::vector<Move> moves = get_legal_moves();
+  MoveList moves = get_legal_moves();
 
-  for (const Move &move : moves) {
-    make_move(move);
+  for (int i = 0; i < moves.count; i++) {
+    make_move(moves[i]);
     int nodes = (depth == 1) ? 1 : perft(depth - 1);
-    results.emplace_back(move, nodes);
+    results.emplace_back(moves[i], nodes);
     undo_move();
   }
 
