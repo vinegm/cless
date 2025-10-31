@@ -4,7 +4,7 @@
 #include "position.hpp"
 
 #include <algorithm>
-#include <vector>
+#include <cstdint>
 
 MoveList ClessEngine::get_legal_moves() const {
   if (legal_cache_valid) return legal_moves;
@@ -51,13 +51,13 @@ void ClessEngine::undo_move() {
   pos.undo_move();
 }
 
-int ClessEngine::perft(int depth) {
+uint64_t ClessEngine::perft(int depth) {
   if (depth == 0) return 1;
 
   MoveList moves = get_legal_moves();
   if (depth == 1) return moves.count;
 
-  int nodes = 0;
+  uint64_t nodes = 0;
   for (int i = 0; i < moves.count; i++) {
     make_move(moves[i]);
     nodes += perft(depth - 1);
@@ -67,19 +67,3 @@ int ClessEngine::perft(int depth) {
   return nodes;
 }
 
-std::vector<std::pair<Move, int>> ClessEngine::perft_divide(int depth) {
-  std::vector<std::pair<Move, int>> results;
-
-  if (depth == 0) return results;
-
-  MoveList moves = get_legal_moves();
-
-  for (int i = 0; i < moves.count; i++) {
-    make_move(moves[i]);
-    int nodes = (depth == 1) ? 1 : perft(depth - 1);
-    results.emplace_back(moves[i], nodes);
-    undo_move();
-  }
-
-  return results;
-}
