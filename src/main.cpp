@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
   noecho();    // Don't echo input characters
   curs_set(0); // Hide the cursor
 
-  // Initialize colors if supported
   if (has_colors()) {
     start_color();
     use_default_colors();
@@ -34,9 +33,19 @@ int main(int argc, char *argv[]) {
     init_pair(LEGAL_MOVE_SQUARE, COLOR_GREEN, COLOR_YELLOW);
   }
 
+  GameState game_state = GameState(args.engine_cmd);
+
   WinHandler handler(WINDOW_HEIGHT, WINDOW_WIDTH, "size_warning");
-  handler.add_window<MenuWin>("menu", MenuWinArgs{"board"});
-  handler.add_window<BoardWin>("board", BoardWinArgs{"menu"});
+  handler.add_window<MenuWin>(
+      "menu",
+      MenuWinArgs{
+          "board",
+          game_state.ongoing_game,
+          game_state.has_engine(),
+          game_state.playing_engine
+      }
+  );
+  handler.add_window<BoardWin>("board", BoardWinArgs{"menu", game_state});
   handler.add_window<SizeWarningWin>("size_warning");
   handler.run("menu");
 

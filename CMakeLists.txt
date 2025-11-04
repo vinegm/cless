@@ -8,8 +8,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CORE_SOURCES src/engine.cpp src/position.cpp src/move_gen.cpp
-                 src/attacks.cpp)
+set(CORE_SOURCES src/game_logic.cpp src/position.cpp src/move_gen.cpp
+                 src/attacks.cpp src/ext_engine.cpp)
 
 set(TUI_SOURCES src/main.cpp src/win_handler.cpp src/menu.cpp src/board.cpp
                 src/size_warning.cpp src/utils.cpp)

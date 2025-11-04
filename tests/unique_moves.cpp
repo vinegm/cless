@@ -1,5 +1,5 @@
 #include "chess_types.hpp"
-#include "engine.hpp"
+#include "game_logic.hpp"
 
 #include <criterion/criterion.h>
 #include <string>
@@ -48,7 +48,7 @@ std::string piece_to_string(const Piece &piece) {
  * @param expected
  * @param after_move
  */
-void check_positions(ClessEngine &board, const ExpectedResult &expected, bool after_move) {
+void check_positions(GameState &board, const ExpectedResult &expected, bool after_move) {
   Piece piece_at_from = board.get_piece_at(expected.move.from);
   Piece piece_at_to = board.get_piece_at(expected.move.to);
   const char *context = after_move ? "after move" : "before move";
@@ -114,7 +114,7 @@ void check_positions(ClessEngine &board, const ExpectedResult &expected, bool af
  * @param expected
  */
 void check_case(ExpectedResult &expected) {
-  ClessEngine board(expected.initial_fen, true);
+  GameState board("", expected.initial_fen);
 
   check_positions(board, expected, false);
 
@@ -148,7 +148,6 @@ Test(unique_moves, e4) {
       .moving_piece = {WHITE, PIECE_PAWN},
       .move = {E2, E4},
   };
-
   check_case(expected);
 }
 
@@ -162,7 +161,6 @@ Test(unique_moves, dxe6_en_passant) {
       .move = {D5, E6, EN_PASSANT},
       .capture_square = E5,
   };
-
   check_case(expected);
 }
 
@@ -174,7 +172,6 @@ Test(unique_moves, dxe6_invalid_en_passant) {
       .moving_piece = {WHITE, PIECE_PAWN},
       .move = {D5, E6, EN_PASSANT},
   };
-
   check_case(expected);
 }
 
@@ -252,7 +249,6 @@ Test(unique_moves, e5_wrong_turn) {
       .moving_piece = {BLACK, PIECE_PAWN},
       .move = {E7, E5},
   };
-
   check_case(expected);
 }
 
@@ -263,6 +259,5 @@ Test(unique_moves, e5_from_empty_square) {
       .moving_piece = {WHITE, PIECE_NONE},
       .move = {E4, E5},
   };
-
   check_case(expected);
 }
