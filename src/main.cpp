@@ -9,7 +9,14 @@
 #define WINDOW_HEIGHT 21
 #define WINDOW_WIDTH 50
 
-int main() {
+struct Args {
+  std::string engine_cmd = "";
+};
+
+Args parse_args(int argc, char *argv[]);
+
+int main(int argc, char *argv[]) {
+  Args args = parse_args(argc, argv);
   setlocale(LC_ALL, "");
   initscr();   // Initialize ncurses
   noecho();    // Don't echo input characters
@@ -36,4 +43,19 @@ int main() {
   endwin();
 
   return 0;
+}
+
+Args parse_args(int argc, char *argv[]) {
+  Args args{};
+
+  for (int i = 1; i < argc; i++) {
+    std::string arg = argv[i];
+    if (arg == "--engine" && i + 1 < argc) {
+      i++;
+      args.engine_cmd = argv[i];
+      continue;
+    }
+  }
+
+  return args;
 }
