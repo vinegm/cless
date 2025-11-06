@@ -14,10 +14,15 @@ void WinHandler::run(std::string start_window) {
     event = 0;
 
     werase(get_main_win());
-    if (!check_terminal_size() && size_warning_win_name != "")
+    clear();
+    refresh();
+
+    if (!check_terminal_size() && size_warning_win_name != "") {
       show_window(size_warning_win_name);
-    else
-      show_window(current_window);
+      continue;
+    }
+
+    show_window(current_window);
   }
 }
 

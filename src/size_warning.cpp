@@ -1,5 +1,7 @@
 #include "size_warning.hpp"
 
+#include <ncurses.h>
+
 void SizeWarningWin::draw() {
   const int warning_height = 10;
   const int warning_width = 60;
@@ -9,6 +11,7 @@ void SizeWarningWin::draw() {
 
   UniqueWindow warning_win = create_centered_window(warning_height, warning_width);
   WINDOW *raw_warning_win = warning_win.get();
+  box(raw_warning_win, 0, 0);
 
   std::string expected_width = std::to_string(handler->WINDOW_WIDTH);
   std::string expected_height = std::to_string(handler->WINDOW_HEIGHT);
@@ -25,7 +28,6 @@ void SizeWarningWin::draw() {
     mvwprintw_centered(raw_warning_win, warning_width, line, msg);
   };
 
-  box(raw_warning_win, 0, 0);
   wattron(raw_warning_win, A_BOLD | A_REVERSE);
   print_centered_warning(1, title);
   wattroff(raw_warning_win, A_BOLD | A_REVERSE);

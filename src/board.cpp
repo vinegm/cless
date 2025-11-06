@@ -1,7 +1,10 @@
 #include "board.hpp"
 
 #include "chess_types.hpp"
+#include "utils.hpp"
 
+#include <cstring>
+#include <ncurses.h>
 #include <vector>
 
 #define title_padding line_padding
@@ -61,12 +64,13 @@ void BoardWin::game_loop() {
 
   keypad(board_win_ptr, true);
   while (true) {
-    to_move_text = (game.to_move() == PieceColor::WHITE) ? "White to move" : "Black to move";
+    to_move_text = (game_state.to_move() == PieceColor::WHITE) ? "White to move" : "Black to move";
 
     modifier_wrapper(parent_win, A_BOLD, [&]() {
       mvwprintw_centered(parent_win, parent_width, next_move_padding, to_move_text);
     });
 
+    touchwin(parent_win);
     wrefresh(parent_win);
 
     printw_board();
@@ -144,7 +148,7 @@ void BoardWin::printw_board() {
       const int square = get_square_from_orientation(draw_rank, draw_file);
       const int color_pair = get_square_color(square);
 
-      char piece_char = get_piece_char_at(static_cast<Square>(square));
+      const char piece_char = get_piece_char(game_state.get_piece_at(square));
       modifier_wrapper(board_win_ptr, COLOR_PAIR(color_pair), [&]() {
         mvwprintw(board_win_ptr, draw_rank + line_padding, draw_file * 2 + 1, "%c ", piece_char);
       });
@@ -222,7 +226,8 @@ int BoardWin::get_square_color(int square) {
   if (square == selected_square) return SELECTED_SQUARE;
 
   if (selected_square.has_value()) {
-    MoveList legal_moves = game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
+    MoveList legal_moves =
+        game_state.get_legal_moves_from(static_cast<Square>(selected_square.value()));
     for (int i = 0; i < legal_moves.count; i++) {
       if (legal_moves[i].to == square) return LEGAL_MOVE_SQUARE;
     }
@@ -238,8 +243,8 @@ int BoardWin::get_square_color(int square) {
 void BoardWin::handle_piece_selection() {
   // Select
   if (!selected_square.has_value()) {
-    Piece piece = game.get_piece_at(static_cast<Square>(highlighted_square));
-    if (piece.type != PIECE_NONE && piece.color == game.to_move())
+    Piece piece = game_state.get_piece_at(highlighted_square);
+    if (piece.type != PIECE_NONE && piece.color == game_state.to_move())
       selected_square = highlighted_square;
     return;
   }
@@ -251,22 +256,57 @@ void BoardWin::handle_piece_selection() {
   }
 
   // Make move
-  MoveList legal_moves = game.get_legal_moves_from(static_cast<Square>(selected_square.value()));
+  MoveList legal_moves =
+      game_state.get_legal_moves_from(static_cast<Square>(selected_square.value()));
 
   Move *found_move = nullptr;
+  bool has_promotion_moves = false;
+
   for (int i = 0; i < legal_moves.count; i++) {
     if (legal_moves[i].to == highlighted_square) {
       found_move = &legal_moves[i];
+      if (legal_moves[i].is_promotion()) { has_promotion_moves = true; }
       break;
     }
   }
 
   bool move_successful = false;
-  if (found_move) { move_successful = game.make_move(*found_move); }
+  if (found_move) {
+    Move *selected_move = found_move;
+
+    if (has_promotion_moves) {
+      int choice = create_popup(
+          "Choose promotion piece:",
+          {"Queen", "Rook", "Bishop", "Knight"},
+          handler->exit_event,
+          handler->resize_event
+      );
+
+      if (choice == handler->exit_event || choice == handler->resize_event) {
+        selected_square = std::nullopt;
+        return;
+      }
+
+      PieceType promotion_pieces[] = {PIECE_QUEEN, PIECE_ROOK, PIECE_BISHOP, PIECE_KNIGHT};
+      PieceType chosen_piece = promotion_pieces[choice];
+
+      for (int i = 0; i < legal_moves.count; i++) {
+        if (legal_moves[i].to == highlighted_square && legal_moves[i].is_promotion()
+            && legal_moves[i].promotion_piece == chosen_piece) {
+          selected_move = &legal_moves[i];
+          break;
+        }
+      }
+    }
+
+    move_successful = game_state.make_move(*selected_move);
+  }
 
   // Deselect after move
   if (move_successful) {
     selected_square = std::nullopt;
+
+    if (game_state.playing_engine) { game_state.make_engine_move(); }
     return;
   }
 
@@ -278,11 +318,7 @@ void BoardWin::handle_piece_selection() {
 /**
  * @brief Get the character representation of a piece at a square
  */
-char BoardWin::get_piece_char_at(Square square) {
-  Piece piece = game.get_piece_at(square);
-
-  if (piece.type == PIECE_NONE) { return ' '; }
-
+char BoardWin::get_piece_char(Piece piece) {
   char piece_char;
   switch (piece.type) {
     case PIECE_PAWN: piece_char = 'P'; break;

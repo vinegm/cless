@@ -1,5 +1,8 @@
 #include "menu.hpp"
 
+#include "utils.hpp"
+
+#include <ncurses.h>
 #include <string>
 #include <vector>
 
@@ -45,28 +48,16 @@ void MenuWin::navigation_loop() {
     printw_menu();
 
     pressed_key = wgetch(menu_win_ptr);
+
+    if (handle_menu_key(pressed_key, highlight, options_count)) {
+      select_option();
+      return;
+    }
+
     switch (pressed_key) {
-      case ' ':
-      case 10: select_option(); return;
-
-      case 'k':
-      case KEY_UP:
-        highlight--;
-        if (highlight < 0) highlight = options_count - 1;
-        break;
-
-      case 'j':
-      case KEY_DOWN:
-        highlight++;
-        if (highlight >= options_count) highlight = 0;
-        break;
-
       case 'q': handler->event = handler->exit_event; return;
-
       case KEY_RESIZE: handler->event = handler->resize_event; return;
-
       case ERR: break;
-
       default: break;
     }
   }
@@ -74,9 +65,20 @@ void MenuWin::navigation_loop() {
 
 void MenuWin::select_option() {
   switch (highlight) {
-    case 0: handler->next_window = board_win_name; return;
+    case 0:
+      playing_engine = false;
+      handler->next_window = board_win_name;
+      return;
 
-    case 1: handler->event = handler->exit_event; return;
+    case 1:
+      if (has_engine) {
+        playing_engine = true;
+        handler->next_window = board_win_name;
+      } else {
+        int pop_event = create_popup("No engine available", {}, 0, handler->resize_event);
+        handler->event = pop_event;
+      }
+      return;
 
     case 2: handler->event = handler->exit_event; return;
   }
@@ -93,7 +95,9 @@ void MenuWin::printw_menu() {
 
   for (int i = 0; i < options_count; i++) {
     if (i == highlight) { wattron(menu_win_ptr, A_REVERSE); }
+    if (i == 1 && !has_engine) { wattron(menu_win_ptr, A_DIM); }
     mvwprintw_centered(menu_win_ptr, win_width, i, options[i]);
+    if (i == 1 && !has_engine) { wattroff(menu_win_ptr, A_DIM); }
     if (i == highlight) { wattroff(menu_win_ptr, A_REVERSE); }
   }
 }
