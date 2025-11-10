@@ -20,6 +20,7 @@
 #define FILE_G (FILE_A << 6)
 #define FILE_H (FILE_A << 7)
 
+#define INITIAL_POSITION_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 #define MAX_POSSIBLE_LEGAL_MOVES 256
 
 // clang-format off

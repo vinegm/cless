@@ -7,13 +7,6 @@
 
 #include <memory>
 
-#define INITIAL_POSITION_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-enum GameMode {
-  PLAYER_VS_PLAYER,
-  PLAYER_VS_ENGINE
-};
-
 class GameState {
 public:
   GameState(const std::string &engine_cmd, const std::string &fen = INITIAL_POSITION_FEN) :
@@ -25,9 +18,16 @@ public:
   PieceColor player_color = ANY;
   bool ongoing_game = false;
   bool playing_engine = false;
-  bool has_engine() { return engine != nullptr; };
+  bool has_engine = false;
 
+  void reset_board() {
+    pos.set_fen(INITIAL_POSITION_FEN);
+    ongoing_game = false;
+    playing_engine = false;
+  }
   std::string get_fen() const { return pos.get_fen(); }
+  void set_fen(const std::string &fen) { return pos.set_fen(fen); }
+
   PieceColor to_move() const { return pos.to_move; }
   Piece get_piece_at(int square) { return pos.get_piece_at(static_cast<Square>(square)); }
   Piece get_piece_at(Square square) { return pos.get_piece_at(square); }
@@ -56,6 +56,7 @@ private:
 
     try {
       engine = std::make_unique<ExtEngine>(engine_cmd);
-    } catch (const std::exception &e) {}
+      has_engine = true;
+    } catch (const std::exception &e) { has_engine = false; }
   }
 };

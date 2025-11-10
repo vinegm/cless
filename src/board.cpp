@@ -3,7 +3,6 @@
 #include "chess_types.hpp"
 #include "utils.hpp"
 
-#include <cstring>
 #include <ncurses.h>
 #include <vector>
 
@@ -20,21 +19,25 @@ void BoardWin::draw() {
 
   box(parent_win, 0, 0);
 
-  std::string title = "CLESS - Chess Game";
-  std::vector<std::string> instructions =
-      {"Arrow keys/hjkl: move cursor", "Space/Enter: select", "o: flip board", "q: return to menu"};
-
-  int instructions_count = instructions.size();
-  int instructions_line = parent_height - line_padding - instructions_count;
+  std::string title;
+  if (game_state.playing_engine) {
+    title = "CLESS - Player vs Engine";
+  } else {
+    title = "CLESS - Player vs Player";
+  }
 
   modifier_wrapper(parent_win, A_BOLD, [&]() {
     mvwprintw_centered(parent_win, parent_width, title_padding, title);
   });
 
+  std::string help_hint = "?: Help";
   modifier_wrapper(parent_win, A_DIM, [&]() {
-    for (size_t i = 0; i < instructions_count; i++) {
-      mvwprintw_centered(parent_win, parent_width, instructions_line + i, instructions[i]);
-    }
+    mvwprintw_centered(parent_win, parent_width, parent_height - 3, help_hint);
+  });
+
+  std::string quit_hint = "q: Quit to main menu";
+  modifier_wrapper(parent_win, A_DIM, [&]() {
+    mvwprintw_centered(parent_win, parent_width, parent_height - 2, quit_hint);
   });
 
   int board_start_x = (parent_width - board_width) / 2;
@@ -127,12 +130,10 @@ void BoardWin::game_loop() {
         modifier_wrapper(board_win_ptr, A_DIM, [&]() { printw_rank_labels(); });
         break;
 
+      case '?': show_help_popup(); break;
       case 'q': handler->next_window = menu_win_name; return;
-
       case KEY_RESIZE: handler->event = handler->resize_event; return;
-
       case ERR: break;
-
       default: break;
     }
   }
@@ -188,6 +189,21 @@ void BoardWin::printw_file_labels() {
 
   mvwprintw(board_win_ptr, 0, 1, "a b c d e f g h");
   mvwprintw(board_win_ptr, board_height - 1, 1, "a b c d e f g h");
+}
+
+/**
+ * @brief Show help popup with all available keybinds
+ */
+void BoardWin::show_help_popup() {
+  std::vector<std::string> help_messages = {
+      "Arrow keys / hjkl - Move cursor",
+      "Space / Enter - Select piece or make move",
+      "o - Flip board orientation",
+      "? - Show help",
+      "q - Return to main menu"
+  };
+
+  create_popup(help_messages, {}, handler->exit_event, handler->resize_event);
 }
 
 /**

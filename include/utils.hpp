@@ -20,6 +20,12 @@ using SharedWindow = std::shared_ptr<WINDOW>;
 UniqueWindow create_centered_window(int height, int width);
 UniqueWindow create_centered_overlay(int height, int width);
 int create_popup(
+    const std::vector<std::string> &messages,
+    const std::vector<std::string> &options,
+    int exit_status,
+    int resize_status
+);
+int create_popup(
     const std::string &message,
     const std::vector<std::string> &options,
     int exit_status,

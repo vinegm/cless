@@ -27,31 +27,36 @@ UniqueWindow create_centered_window(int height, int width) {
 }
 
 /**
- * @brief Create a popup with a message, also allows a list of options
+ * @brief Create a popup with multiple message lines, also allows a list of options
  *
- * @param message Message to display in the popup
+ * @param messages Vector of message strings to display in the popup
  * @param options Vector of option strings to display, empty for just an OK popup
  * @param exit_status The return value if the popup is cancelled (no options)
  * @param resize_status The return value if the popup is resized
  * @return int The index of the chosen option, exit_status if cancelled
  */
 int create_popup(
-    const std::string &message,
+    const std::vector<std::string> &messages,
     const std::vector<std::string> &options,
     int exit_status,
     int resize_status
 ) {
-  int message_width = message.length();
+  int max_message_width = 0;
+  for (const auto &message : messages) {
+    max_message_width = std::max(max_message_width, (int)message.length());
+  }
+
   int max_option_width = 0;
   for (const auto &option : options) {
     max_option_width = std::max(max_option_width, (int)option.length());
   }
 
   int window_width =
-      std::max(message_width, max_option_width) + 4; // 2 for padding and borders on each side
-  int window_height = line_padding * 5; // 2 for borders + 1 for message + 2 for padding
+      std::max(max_message_width, max_option_width) + 4; // 2 for padding and borders on each side
+  int window_height =
+      line_padding * 3 + messages.size() + line_padding; // borders + messages + padding
 
-  if (options.size() != 0) { window_height += options.size() + 1; } // 1 for padding
+  if (options.size() != 0) { window_height += options.size() + line_padding; } // options + padding
 
   UniqueWindow popup_win = create_centered_window(window_height, window_width);
   WINDOW *popup_win_ptr = popup_win.get();
@@ -60,7 +65,10 @@ int create_popup(
   int options_count = options.size();
   int pressed_key;
   if (options_count == 0) {
-    mvwprintw_centered(popup_win_ptr, window_width, 2, message);
+    // Display all message lines
+    for (size_t i = 0; i < messages.size(); i++) {
+      mvwprintw_centered(popup_win_ptr, window_width, line_padding + 1 + i, messages[i]);
+    }
 
     wrefresh(popup_win_ptr);
     pressed_key = wgetch(popup_win_ptr);
@@ -75,9 +83,15 @@ int create_popup(
   while (true) {
     wrefresh(popup_win_ptr);
 
-    mvwprintw_centered(popup_win_ptr, window_width, line_padding * 2, message);
+    // Display all message lines
+    for (size_t i = 0; i < messages.size(); i++) {
+      mvwprintw_centered(popup_win_ptr, window_width, line_padding + 1 + i, messages[i]);
+    }
+
+    // Display options with proper offset
+    int options_start_line = line_padding * 2 + messages.size() + line_padding;
     for (int i = 0; i < options_count; i++) {
-      int line = (line_padding * 4) + i;
+      int line = options_start_line + i;
 
       if (i != current_selection) {
         mvwprintw_centered(popup_win_ptr, window_width, line, options[i]);
@@ -101,6 +115,24 @@ int create_popup(
       default: break;
     }
   }
+}
+
+/**
+ * @brief Create a popup with a single message, also allows a list of options
+ *
+ * @param message Message to display in the popup
+ * @param options Vector of option strings to display, empty for just an OK popup
+ * @param exit_status The return value if the popup is cancelled (no options)
+ * @param resize_status The return value if the popup is resized
+ * @return int The index of the chosen option, exit_status if cancelled
+ */
+int create_popup(
+    const std::string &message,
+    const std::vector<std::string> &options,
+    int exit_status,
+    int resize_status
+) {
+  return create_popup(std::vector<std::string>{message}, options, exit_status, resize_status);
 }
 
 /**

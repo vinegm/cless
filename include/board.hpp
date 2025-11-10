@@ -47,6 +47,7 @@ private:
   void printw_board();
   void printw_rank_labels();
   void printw_file_labels();
+  void show_help_popup();
   int get_square_from_orientation(int draw_rank, int draw_file);
   int get_square_color(int square);
   char get_piece_char(Piece piece);

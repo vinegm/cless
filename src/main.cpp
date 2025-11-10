@@ -6,8 +6,8 @@
 #include <ncurses.h>
 #include <sys/types.h>
 
-#define WINDOW_HEIGHT 21
-#define WINDOW_WIDTH 50
+#define WINDOW_HEIGHT 19
+#define WINDOW_WIDTH 45
 
 struct Args {
   std::string engine_cmd = "";
@@ -40,9 +40,10 @@ int main(int argc, char *argv[]) {
       "menu",
       MenuWinArgs{
           "board",
+          game_state.has_engine,
           game_state.ongoing_game,
-          game_state.has_engine(),
-          game_state.playing_engine
+          game_state.playing_engine,
+          [&game_state]() { game_state.reset_board(); }
       }
   );
   handler.add_window<BoardWin>("board", BoardWinArgs{"menu", game_state});
