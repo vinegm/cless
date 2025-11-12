@@ -120,14 +120,12 @@ void MenuWin::select_option() {
         int popup_event = create_popup(
             "Exiting will lose current game progress!",
             {"Cancel", "Exit Anyway"},
-            handler->exit_event,
+            1,
             handler->resize_event
         );
 
-        if (popup_event == handler->resize_event || popup_event == handler->exit_event) {
-          handler->event = popup_event;
-        }
-
+        if (popup_event == 1) handler->event = handler->exit_event;
+        if (popup_event == handler->resize_event) handler->event = popup_event;
         return;
       }
 
