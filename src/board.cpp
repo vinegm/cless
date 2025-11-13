@@ -187,8 +187,14 @@ void BoardWin::printw_rank_labels() {
 void BoardWin::printw_file_labels() {
   WINDOW *board_win_ptr = board_win.get();
 
-  mvwprintw(board_win_ptr, 0, 1, "a b c d e f g h");
-  mvwprintw(board_win_ptr, board_height - 1, 1, "a b c d e f g h");
+  if (board_orientation == BOARD_ORIENTATION_WHITE) {
+    mvwprintw(board_win_ptr, 0, 1, "a b c d e f g h");
+    mvwprintw(board_win_ptr, board_height - 1, 1, "a b c d e f g h");
+    return;
+  }
+
+  mvwprintw(board_win_ptr, 0, 1, "h g f e d c b a");
+  mvwprintw(board_win_ptr, board_height - 1, 1, "h g f e d c b a");
 }
 
 /**
