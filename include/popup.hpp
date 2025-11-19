@@ -22,7 +22,10 @@ public:
   int handle_input(int pressed_key);
   int get_selected_option() const { return selected_option; }
   void reset_selection() {
-    if (options.size() == 0) selected_option = -1;
+    if (options.size() == 0) {
+      selected_option = -1;
+      return;
+    }
     selected_option = 0;
   }
 

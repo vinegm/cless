@@ -84,6 +84,7 @@ void Popup::show() {
 
 void Popup::hide() {
   hide_panel(popup_panel.get());
+  reset_selection();
   visible = false;
 
   update_panels();
@@ -116,14 +117,14 @@ int Popup::handle_input(int pressed_key) {
   }
 
   if (pressed_key == 'q') {
-    reset_selection();
     hide();
     return -1;
   }
 
   if (handle_menu_key(pressed_key, selected_option, options.size())) {
+    int result = selected_option;
     hide();
-    return selected_option;
+    return result;
   }
 
   update();
