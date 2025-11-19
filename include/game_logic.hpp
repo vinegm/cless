@@ -6,6 +6,12 @@
 #include "position.hpp"
 
 #include <memory>
+#include <stdexcept>
+
+enum GameMode {
+  PLAYER_VS_PLAYER,
+  PLAYER_VS_ENGINE
+};
 
 class GameState {
 public:
@@ -16,14 +22,18 @@ public:
   GameState() : pos(INITIAL_POSITION_FEN) {}
 
   PieceColor player_color = ANY;
+  GameMode current_mode = PLAYER_VS_PLAYER;
   bool ongoing_game = false;
-  bool playing_engine = false;
   bool has_engine = false;
 
-  void reset_board() {
+  void new_game(GameMode mode) {
+    if (mode == PLAYER_VS_ENGINE && !has_engine) {
+      throw std::runtime_error("GameState::new_game() - No engine available!");
+    }
+
     pos.set_fen(INITIAL_POSITION_FEN);
-    ongoing_game = false;
-    playing_engine = false;
+    ongoing_game = true;
+    current_mode = mode;
   }
   std::string get_fen() const { return pos.get_fen(); }
   void set_fen(const std::string &fen) { return pos.set_fen(fen); }

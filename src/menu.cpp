@@ -1,147 +1,137 @@
 #include "menu.hpp"
 
+#include "game_logic.hpp"
 #include "utils.hpp"
 
 #include <ncurses.h>
+#include <panel.h>
 #include <string>
 #include <vector>
 
-#define title_padding (line_padding * 4)
-#define menu_padding (title_padding + line_padding)
-#define instructions_padding (menu_padding + line_padding)
+#define title_padding (padding * 4)
+#define menu_padding (title_padding + padding)
+#define instructions_padding (menu_padding + padding)
 
-void MenuWin::draw() {
-  WINDOW *parent_win = handler->get_main_win();
-  int parent_height, parent_width;
-  getmaxyx(parent_win, parent_height, parent_width);
+void MenuWin::draw_panel() {
+  popup_handler.add_popup("help", help_popup);
+  popup_handler.add_popup("no_engine", no_engine_popup);
+  popup_handler.add_popup("new_game", new_game_popup, [this](int pressed_key, int popup_result) {
+    if (popup_result == 0) state.next_window = state.board_win_name;
 
-  box(parent_win, 0, 0);
+    if (popup_result == 1) {
+      state.game.new_game(selected_mode.value());
+      state.next_window = state.board_win_name;
+    }
+
+    return true;
+  });
+  popup_handler
+      .add_popup("confirm_exit", confirm_exit_popup, [this](int pressed_key, int popup_result) {
+        if (popup_result == 1) state.exit_tui = true;
+        return true;
+      });
+
+  WINDOW *main_win_ptr = main_win.get();
+  int main_win_height, main_win_width;
+  getmaxyx(main_win_ptr, main_win_height, main_win_width);
+
+  box(main_win_ptr, 0, 0);
 
   int title_lines_count = printw_title();
 
   std::string help_hint = "?: Help";
-  modifier_wrapper(parent_win, A_DIM, [&]() {
-    mvwprintw_centered(parent_win, parent_width, parent_height - 3, help_hint);
+  modifier_wrapper(main_win_ptr, A_DIM, [&]() {
+    mvwprintw_centered(main_win_ptr, main_win_width, main_win_height - 3, help_hint);
   });
 
   std::string quit_hint = "q: Quit to main menu";
-  modifier_wrapper(parent_win, A_DIM, [&]() {
-    mvwprintw_centered(parent_win, parent_width, parent_height - 2, quit_hint);
+  modifier_wrapper(main_win_ptr, A_DIM, [&]() {
+    mvwprintw_centered(main_win_ptr, main_win_width, main_win_height - 2, quit_hint);
   });
 
   WINDOW *menu_win_ptr =
-      derwin(parent_win, options_count, parent_width, title_lines_count + menu_padding, 0);
+      derwin(main_win_ptr, options.size(), main_win_width, title_lines_count + menu_padding, 0);
   menu_win = UniqueWindow(menu_win_ptr);
-  printw_menu();
 
-  navigation_loop();
+  update(); // Initial draw of interractive elements
 }
 
-void MenuWin::navigation_loop() {
-  WINDOW *parent_win = handler->get_main_win();
-  WINDOW *menu_win_ptr = menu_win.get();
+void MenuWin::update() {
+  if (popup_handler.any_visible()) {
+    popup_handler.update();
+    return;
+  }
 
-  keypad(menu_win_ptr, true);
-  int pressed_key;
-  while (true) {
-    touchwin(parent_win);
-    wrefresh(parent_win);
-    printw_menu();
+  WINDOW *main_win_ptr = main_win.get();
 
-    pressed_key = wgetch(menu_win_ptr);
+  printw_menu();
 
-    if (handle_menu_key(pressed_key, highlight, options_count)) {
-      select_option();
+  touchwin(main_win_ptr);
+  wrefresh(main_win_ptr);
+}
+
+void MenuWin::handle_input(int pressed_key) {
+  if (popup_handler.any_visible()) {
+    popup_handler.handle_input(pressed_key);
+    return;
+  }
+
+  if (handle_menu_key(pressed_key, highlight, options.size())) {
+    select_option();
+    return;
+  }
+
+  switch (pressed_key) {
+    case '?': popup_handler.show_popup("help"); break;
+
+    case 'q': {
+      if (state.game.ongoing_game) return popup_handler.show_popup("confirm_exit");
+
+      state.exit_tui = true;
       return;
     }
 
-    switch (pressed_key) {
-      case '?': show_help_popup(); break;
-      case 'q': handler->event = handler->exit_event; return;
-      case KEY_RESIZE: handler->event = handler->resize_event; return;
-      case ERR: break;
-      default: break;
-    }
-  }
-}
-
-/**
- * @brief Show popup when a game is ongoing and handles game continuation or new game
- */
-void MenuWin::ongoing_game_popup(GameMode new_game_mode) {
-  std::string message = "A game is currently ongoing.";
-  std::vector<std::string> popup_options = {"Return to game", "Start new game"};
-
-  int popup_event =
-      create_popup(message, popup_options, handler->exit_event, handler->resize_event);
-
-  if (popup_event == handler->exit_event) return;
-  if (popup_event == handler->resize_event) {
-    handler->event = handler->resize_event;
-    return;
-  }
-
-  if (popup_event == 0) {
-    handler->next_window = board_win_name;
-    return;
-  }
-
-  if (popup_event == 1) {
-    reset_game_callback();
-    start_new_game(new_game_mode);
+    default: break;
   }
 }
 
 void MenuWin::select_option() {
   switch (highlight) {
     case 0: {
-      GameMode mode = PLAYER_VS_PLAYER;
-
-      if (ongoing_game) return ongoing_game_popup(mode);
-      start_new_game(mode);
+      selected_mode = PLAYER_VS_PLAYER;
+      start_new_game();
       return;
     }
 
     case 1: {
-      if (has_engine) {
-        GameMode mode = PLAYER_VS_ENGINE;
-
-        if (ongoing_game) return ongoing_game_popup(mode);
-        start_new_game(mode);
+      if (state.game.has_engine) {
+        selected_mode = PLAYER_VS_ENGINE;
+        start_new_game();
       } else {
-        int pop_event = create_popup("No engine available", {}, 0, handler->resize_event);
-        handler->event = pop_event;
+        popup_handler.show_popup("no_engine");
       }
       return;
     }
 
     case 2: {
-      if (ongoing_game) {
-        int popup_event = create_popup(
-            "Exiting will lose current game progress!",
-            {"Cancel", "Exit Anyway"},
-            1,
-            handler->resize_event
-        );
+      if (state.game.ongoing_game) return popup_handler.show_popup("confirm_exit");
 
-        if (popup_event == 1) handler->event = handler->exit_event;
-        if (popup_event == handler->resize_event) handler->event = popup_event;
-        return;
-      }
-
-      handler->event = handler->exit_event;
+      state.exit_tui = true;
       return;
     }
   }
 }
 
-void MenuWin::start_new_game(GameMode mode) {
-  ongoing_game = true;
+void MenuWin::start_new_game() {
+  if (!selected_mode.has_value()) return;
 
-  if (mode == PLAYER_VS_PLAYER) { playing_engine = false; }
-  if (mode == PLAYER_VS_ENGINE) { playing_engine = true; }
+  if (state.game.ongoing_game) {
+    popup_handler.show_popup("new_game");
+    return;
+  }
 
-  handler->next_window = board_win_name;
+  state.game.new_game(selected_mode.value());
+  state.next_window = state.board_win_name;
 }
 
 /**
@@ -153,11 +143,11 @@ void MenuWin::printw_menu() {
   int win_width, _;
   getmaxyx(menu_win_ptr, _, win_width);
 
-  for (int i = 0; i < options_count; i++) {
+  for (int i = 0; i < options.size(); i++) {
     if (i == highlight) { wattron(menu_win_ptr, A_REVERSE); }
-    if (i == 1 && !has_engine) { wattron(menu_win_ptr, A_DIM); }
+    if (i == 1 && !state.game.has_engine) { wattron(menu_win_ptr, A_DIM); }
     mvwprintw_centered(menu_win_ptr, win_width, i, options[i]);
-    if (i == 1 && !has_engine) { wattroff(menu_win_ptr, A_DIM); }
+    if (i == 1 && !state.game.has_engine) { wattroff(menu_win_ptr, A_DIM); }
     if (i == highlight) { wattroff(menu_win_ptr, A_REVERSE); }
   }
 }
@@ -168,9 +158,9 @@ void MenuWin::printw_menu() {
  * @return int - The number of lines used by the title
  */
 int MenuWin::printw_title() {
-  WINDOW *parent_win = handler->get_main_win();
-  int _, parent_width;
-  getmaxyx(parent_win, _, parent_width);
+  WINDOW *main_win_ptr = main_win.get();
+  int _, main_win_width;
+  getmaxyx(main_win_ptr, _, main_win_width);
 
   std::vector<std::wstring> titleLines = {
       L" ██████╗██╗     ███████╗███████╗███████╗",
@@ -183,22 +173,8 @@ int MenuWin::printw_title() {
 
   int title_lines_count = titleLines.size();
   for (int i = 0; i < title_lines_count; i++) {
-    mvwprintw_centered(parent_win, parent_width, i + title_padding, titleLines[i]);
+    mvwprintw_centered(main_win_ptr, main_win_width, i + title_padding, titleLines[i]);
   }
 
   return title_lines_count;
-}
-
-/**
- * @brief Show help popup with menu navigation instructions
- */
-void MenuWin::show_help_popup() {
-  std::vector<std::string> help_messages = {
-      "Arrow keys / jk - Move cursor",
-      "Space / Enter - Select option",
-      "? - Show help",
-      "q - Quit the game"
-  };
-
-  create_popup(help_messages, {}, handler->exit_event, handler->resize_event);
 }

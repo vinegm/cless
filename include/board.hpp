@@ -1,54 +1,61 @@
 #pragma once
 
-#include "game_logic.hpp"
+#include "chess_types.hpp"
+#include "popup.hpp"
+#include "tui_state.hpp"
 #include "win_handler.hpp"
 
 #include <cstdint>
 #include <ncurses.h>
 #include <optional>
 
-enum BoardOrientation {
-  BOARD_ORIENTATION_WHITE,
-  BOARD_ORIENTATION_BLACK
+enum class BoardOrientation {
+  WHITE,
+  BLACK
 };
 
-enum SquareColor {
-  WHITE_SQUARE = 1,
-  BLACK_SQUARE,
-  HIGHLIGHTED_SQUARE,
-  SELECTED_SQUARE,
-  LEGAL_MOVE_SQUARE
+enum class SquareColor {
+  WHITE = 1,
+  BLACK,
+  HIGHLIGHTED,
+  SELECTED,
+  LEGAL_MOVE
 };
 
-struct BoardWinArgs {
-  std::string menu_win_name = "Undefined";
-  GameState &game_state;
-};
-
-class BoardWin : public BaseWindow {
+class BoardWin : public BaseWindow<TuiState> {
 public:
-  BoardWin(const BoardWinArgs &args) :
-      menu_win_name(args.menu_win_name), game_state(args.game_state) {}
-  void draw() override;
+  BoardWin(TuiState &state) : BaseWindow<TuiState>(state) { draw_panel(); }
+
+  void draw_panel() override;
+  void update() override;
+  void handle_input(int pressed_key) override;
+  void recenter_popups() override { popup_handler.recenter_popups(); };
 
 private:
   const std::string menu_win_name;
-  GameState &game_state;
+  uint8_t highlighted_square = E4;
+  BoardOrientation board_orientation = BoardOrientation::WHITE;
+  std::optional<int> selected_square = std::nullopt;
+  std::optional<Move> promotion_move = std::nullopt;
 
   UniqueWindow board_win;
-  uint8_t highlighted_square = E4;
 
-  std::optional<int> selected_square = std::nullopt;
+  PopupHandler popup_handler;
+  Popup help_popup{
+      {"Arrow keys / hjkl - Move cursor",
+       "Space / Enter - Select piece / Move piece",
+       "o - Invert board orientation",
+       "r - Rotate board",
+       "? - Show help",
+       "q - Quit to main menu"}
+  };
+  Popup promote_popup{{"Choose promotion piece:"}, {"Queen", "Rook", "Bishop", "Knight"}};
 
-  int board_orientation = BOARD_ORIENTATION_WHITE;
-
-  void game_loop();
   void handle_piece_selection();
   void printw_board();
   void printw_rank_labels();
   void printw_file_labels();
-  void show_help_popup();
   int get_square_from_orientation(int draw_rank, int draw_file);
-  int get_square_color(int square);
+  SquareColor get_square_color(int square);
   char get_piece_char(Piece piece);
 };

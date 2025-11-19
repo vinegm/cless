@@ -1,9 +1,7 @@
 #include "utils.hpp"
 
-#include <algorithm>
 #include <ncurses.h>
 #include <string>
-#include <vector>
 
 /**
  * @brief Create a centered window object, does not refresh the window.
@@ -24,115 +22,6 @@ UniqueWindow create_centered_window(int height, int width) {
   if (width > scr_width) width = scr_width;
 
   return UniqueWindow(newwin(height, width, y_start, x_start));
-}
-
-/**
- * @brief Create a popup with multiple message lines, also allows a list of options
- *
- * @param messages Vector of message strings to display in the popup
- * @param options Vector of option strings to display, empty for just an OK popup
- * @param exit_status The return value if the popup is cancelled (no options)
- * @param resize_status The return value if the popup is resized
- * @return int The index of the chosen option, exit_status if cancelled
- */
-int create_popup(
-    const std::vector<std::string> &messages,
-    const std::vector<std::string> &options,
-    int exit_status,
-    int resize_status
-) {
-  int max_message_width = 0;
-  for (const auto &message : messages) {
-    max_message_width = std::max(max_message_width, (int)message.length());
-  }
-
-  int max_option_width = 0;
-  for (const auto &option : options) {
-    max_option_width = std::max(max_option_width, (int)option.length());
-  }
-
-  int window_width =
-      std::max(max_message_width, max_option_width) + 4; // 2 for padding and borders on each side
-  int window_height =
-      line_padding * 3 + messages.size() + line_padding; // borders + messages + padding
-
-  if (options.size() != 0) { window_height += options.size() + line_padding; } // options + padding
-
-  UniqueWindow popup_win = create_centered_window(window_height, window_width);
-  WINDOW *popup_win_ptr = popup_win.get();
-  box(popup_win_ptr, 0, 0);
-
-  int options_count = options.size();
-  int pressed_key;
-  if (options_count == 0) {
-    // Display all message lines
-    for (size_t i = 0; i < messages.size(); i++) {
-      mvwprintw_centered(popup_win_ptr, window_width, line_padding + 1 + i, messages[i]);
-    }
-
-    wrefresh(popup_win_ptr);
-    pressed_key = wgetch(popup_win_ptr);
-
-    if (pressed_key == KEY_RESIZE) return resize_status;
-    return exit_status;
-  }
-
-  keypad(popup_win_ptr, true);
-
-  int current_selection = 0;
-  while (true) {
-    wrefresh(popup_win_ptr);
-
-    // Display all message lines
-    for (size_t i = 0; i < messages.size(); i++) {
-      mvwprintw_centered(popup_win_ptr, window_width, line_padding + 1 + i, messages[i]);
-    }
-
-    // Display options with proper offset
-    int options_start_line = line_padding * 2 + messages.size() + line_padding;
-    for (int i = 0; i < options_count; i++) {
-      int line = options_start_line + i;
-
-      if (i != current_selection) {
-        mvwprintw_centered(popup_win_ptr, window_width, line, options[i]);
-        continue;
-      }
-
-      modifier_wrapper(popup_win_ptr, A_REVERSE, [&]() {
-        mvwprintw_centered(popup_win_ptr, window_width, line, options[i]);
-      });
-    }
-
-    pressed_key = wgetch(popup_win_ptr);
-    if (handle_menu_key(pressed_key, current_selection, options_count)) {
-      return current_selection;
-    }
-
-    switch (pressed_key) {
-      case 'q': return exit_status;
-      case KEY_RESIZE: return resize_status;
-      case ERR: break;
-      default: break;
-    }
-  }
-}
-
-/**
- * @brief Create a popup with a single message, also allows a list of options
- *
- * @param message Message to display in the popup
- * @param options Vector of option strings to display, empty for just an OK popup
- * @param exit_status The return value if the popup is cancelled (no options)
- * @param resize_status The return value if the popup is resized
- * @return int The index of the chosen option, exit_status if cancelled
- */
-int create_popup(
-    const std::string &message,
-    const std::vector<std::string> &options,
-    int exit_status,
-    int resize_status
-) {
-  return create_popup(std::vector<std::string>{message}, options, exit_status, resize_status);
 }
 
 /**

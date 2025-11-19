@@ -1,13 +1,11 @@
 #include "board.hpp"
+#include "game_logic.hpp"
 #include "menu.hpp"
 #include "size_warning.hpp"
 #include "win_handler.hpp"
 
 #include <ncurses.h>
 #include <sys/types.h>
-
-#define WINDOW_HEIGHT 19
-#define WINDOW_WIDTH 45
 
 struct Args {
   std::string engine_cmd = "";
@@ -26,27 +24,22 @@ int main(int argc, char *argv[]) {
     start_color();
     use_default_colors();
 
-    init_pair(WHITE_SQUARE, COLOR_BLACK, COLOR_WHITE);
-    init_pair(BLACK_SQUARE, COLOR_WHITE, COLOR_BLACK);
-    init_pair(HIGHLIGHTED_SQUARE, COLOR_RED, COLOR_BLUE);
-    init_pair(SELECTED_SQUARE, COLOR_WHITE, COLOR_RED);
-    init_pair(LEGAL_MOVE_SQUARE, COLOR_GREEN, COLOR_YELLOW);
+    init_pair(static_cast<int>(SquareColor::WHITE), COLOR_BLACK, COLOR_WHITE);
+    init_pair(static_cast<int>(SquareColor::BLACK), COLOR_WHITE, COLOR_BLACK);
+    init_pair(static_cast<int>(SquareColor::HIGHLIGHTED), COLOR_RED, COLOR_BLUE);
+    init_pair(static_cast<int>(SquareColor::SELECTED), COLOR_WHITE, COLOR_RED);
+    init_pair(static_cast<int>(SquareColor::LEGAL_MOVE), COLOR_GREEN, COLOR_YELLOW);
   }
 
   GameState game_state = GameState(args.engine_cmd);
 
-  WinHandler handler(WINDOW_HEIGHT, WINDOW_WIDTH, "size_warning");
-  handler.add_window<MenuWin>(
-      "menu",
-      MenuWinArgs{
-          "board",
-          game_state.has_engine,
-          game_state.ongoing_game,
-          game_state.playing_engine,
-          [&game_state]() { game_state.reset_board(); }
-      }
-  );
-  handler.add_window<BoardWin>("board", BoardWinArgs{"menu", game_state});
+  TuiState tui_state(19, 46, game_state);
+  tui_state.menu_win_name = "menu";
+  tui_state.board_win_name = "board";
+
+  WinHandler<TuiState> handler(tui_state);
+  handler.add_window<MenuWin>("menu");
+  handler.add_window<BoardWin>("board");
   handler.add_window<SizeWarningWin>("size_warning");
   handler.run("menu");
 
