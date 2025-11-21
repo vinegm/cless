@@ -45,7 +45,6 @@ private:
       {"Arrow keys / hjkl - Move cursor",
        "Space / Enter - Select piece / Move piece",
        "o - Invert board orientation",
-       "r - Rotate board",
        "? - Show help",
        "q - Quit to main menu"}
   };

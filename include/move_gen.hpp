@@ -37,6 +37,7 @@ class MoveGenerator {
 public:
   MoveList generate_pseudo_legal_moves(const Position &position) const;
   MoveList generate_legal_moves(const Position &position) const;
+  bool is_in_check(const Position &position, PieceColor color) const;
 
 private:
   template<PieceColor Us>
@@ -48,7 +49,6 @@ private:
   int generate_castling_moves(const Position &position, Move *moves) const;
 
   bool is_square_attacked(const Position &position, Square square, PieceColor by_color) const;
-  bool is_in_check(const Position &position, PieceColor color) const;
   bool is_legal_move(const Position &position, const Move &move) const;
   Square find_king(const Position &position, PieceColor color) const;
 

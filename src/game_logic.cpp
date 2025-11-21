@@ -6,6 +6,21 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <stdexcept>
+
+void GameState::new_game(GameMode mode, PieceColor player_color) {
+  if (mode == PLAYER_VS_ENGINE && !has_engine) {
+    throw std::runtime_error("GameState::new_game() - No engine available!");
+  }
+
+  pos.set_fen(INITIAL_POSITION_FEN);
+  this->player_color = player_color;
+  legal_cache_valid = false;
+  ongoing_game = true;
+  current_mode = mode;
+
+  if (mode == PLAYER_VS_ENGINE && player_color == BLACK) make_engine_move();
+}
 
 MoveList GameState::get_legal_moves() const {
   if (legal_cache_valid) return legal_moves;
@@ -126,4 +141,34 @@ bool GameState::make_engine_move() {
   if (valid_move) { return make_move(*valid_move); }
 
   return false;
+}
+
+GameResult GameState::get_game_result() const {
+  MoveList legal_moves = get_legal_moves();
+  bool in_check = generator.is_in_check(pos, pos.to_move);
+
+  if (legal_moves.empty() && in_check) return CHECKMATE;
+
+  if (legal_moves.empty() && !in_check) return STALEMATE;
+
+  if (pos.halfmove_clock >= 100) return DRAW_FIFTY_MOVE_RULE;
+
+  int white_pieces = 0, black_pieces = 0;
+  for (int square = 0; square < 64; square++) {
+    Piece piece = pos.get_piece_at(static_cast<Square>(square));
+    if (piece.type == PIECE_NONE) continue;
+
+    if (piece.color == WHITE) {
+      white_pieces++;
+    } else {
+      black_pieces++;
+    }
+  }
+
+  if (white_pieces == 1 && black_pieces == 1) return DRAW_INSUFFICIENT_MATERIAL;
+
+  // TODO: More insufficient material cases (e.g., King and Bishop vs King, King and Knight vs King,
+  // etc.)
+
+  return GAME_ONGOING;
 }

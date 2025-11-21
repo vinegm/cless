@@ -3,6 +3,7 @@
 #include "game_logic.hpp"
 #include "utils.hpp"
 
+#include <cstdlib>
 #include <ncurses.h>
 #include <panel.h>
 #include <string>
@@ -19,6 +20,11 @@ void MenuWin::draw_panel() {
     if (popup_result == 0) state.next_window = state.board_win_name;
 
     if (popup_result == 1) {
+      if (selected_mode.value() == PLAYER_VS_ENGINE) {
+        popup_handler.show_popup("select_color");
+        return true;
+      }
+
       state.game.new_game(selected_mode.value());
       state.next_window = state.board_win_name;
     }
@@ -28,6 +34,20 @@ void MenuWin::draw_panel() {
   popup_handler
       .add_popup("confirm_exit", confirm_exit_popup, [this](int pressed_key, int popup_result) {
         if (popup_result == 1) state.exit_tui = true;
+        return true;
+      });
+  popup_handler
+      .add_popup("select_color", select_color_popup, [this](int pressed_key, int popup_result) {
+        PieceColor selected_color;
+        switch (popup_result) {
+          case 0: selected_color = WHITE; break;
+          case 1: selected_color = BLACK; break;
+          case 2: selected_color = (rand() % 2 == 0) ? WHITE : BLACK; break;
+          default: return false;
+        }
+
+        state.game.new_game(selected_mode.value(), selected_color);
+        state.next_window = state.board_win_name;
         return true;
       });
 
@@ -85,7 +105,7 @@ void MenuWin::handle_input(int pressed_key) {
     case '?': popup_handler.show_popup("help"); break;
 
     case 'q': {
-      if (state.game.ongoing_game) return popup_handler.show_popup("confirm_exit");
+      if (state.game.is_game_ongoing()) return popup_handler.show_popup("confirm_exit");
 
       state.exit_tui = true;
       return;
@@ -104,7 +124,7 @@ void MenuWin::select_option() {
     }
 
     case 1: {
-      if (state.game.has_engine) {
+      if (state.game.has_engine_available()) {
         selected_mode = PLAYER_VS_ENGINE;
         start_new_game();
       } else {
@@ -114,7 +134,7 @@ void MenuWin::select_option() {
     }
 
     case 2: {
-      if (state.game.ongoing_game) return popup_handler.show_popup("confirm_exit");
+      if (state.game.is_game_ongoing()) return popup_handler.show_popup("confirm_exit");
 
       state.exit_tui = true;
       return;
@@ -125,8 +145,13 @@ void MenuWin::select_option() {
 void MenuWin::start_new_game() {
   if (!selected_mode.has_value()) return;
 
-  if (state.game.ongoing_game) {
+  if (state.game.is_game_ongoing()) {
     popup_handler.show_popup("new_game");
+    return;
+  }
+
+  if (selected_mode.value() == PLAYER_VS_ENGINE) {
+    popup_handler.show_popup("select_color");
     return;
   }
 
@@ -145,9 +170,9 @@ void MenuWin::printw_menu() {
 
   for (int i = 0; i < options.size(); i++) {
     if (i == highlight) { wattron(menu_win_ptr, A_REVERSE); }
-    if (i == 1 && !state.game.has_engine) { wattron(menu_win_ptr, A_DIM); }
+    if (i == 1 && !state.game.has_engine_available()) { wattron(menu_win_ptr, A_DIM); }
     mvwprintw_centered(menu_win_ptr, win_width, i, options[i]);
-    if (i == 1 && !state.game.has_engine) { wattroff(menu_win_ptr, A_DIM); }
+    if (i == 1 && !state.game.has_engine_available()) { wattroff(menu_win_ptr, A_DIM); }
     if (i == highlight) { wattroff(menu_win_ptr, A_REVERSE); }
   }
 }

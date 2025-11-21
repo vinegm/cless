@@ -38,17 +38,6 @@ void BoardWin::draw_panel() {
 
   box(main_win_ptr, 0, 0);
 
-  std::string title;
-  if (state.game.current_mode == PLAYER_VS_ENGINE) {
-    title = "CLESS - Player vs Engine";
-  } else {
-    title = "CLESS - Player vs Player";
-  }
-
-  modifier_wrapper(main_win_ptr, A_BOLD, [&]() {
-    mvwprintw_centered(main_win_ptr, main_win_width, title_padding, title);
-  });
-
   std::string help_hint = "?: Help";
   modifier_wrapper(main_win_ptr, A_DIM, [&]() {
     mvwprintw_centered(main_win_ptr, main_win_width, main_win_height - 3, help_hint);
@@ -78,11 +67,38 @@ void BoardWin::update() {
   int main_win_height, main_win_width;
   getmaxyx(main_win_ptr, main_win_height, main_win_width);
 
-  std::string to_move_text =
-      (state.game.to_move() == PieceColor::WHITE) ? "White to move" : "Black to move";
+  std::string title;
+  if (state.game.get_current_mode() == PLAYER_VS_ENGINE) {
+    title = "CLESS - Player vs Engine";
+  } else {
+    title = "CLESS - Player vs Player";
+  }
+
+  std::string status_text;
+  GameResult game_result = state.game.get_game_result();
+
+  switch (game_result) {
+    case GAME_ONGOING: {
+      bool is_white_to_move = (state.game.to_move() == PieceColor::WHITE);
+      status_text = is_white_to_move ? "White to move" : "Black to move";
+      break;
+    }
+    case CHECKMATE: {
+      bool is_white_win = (state.game.to_move() == PieceColor::WHITE);
+      status_text = is_white_win ? "Black wins by checkmate!" : "White wins by checkmate!";
+      break;
+    }
+    case STALEMATE: status_text = "Draw by stalemate"; break;
+    case DRAW_INSUFFICIENT_MATERIAL: status_text = "Draw by insufficient material"; break;
+    case DRAW_FIFTY_MOVE_RULE: status_text = "Draw by 50-move rule"; break;
+    case DRAW_OTHER: status_text = "Draw"; break;
+  }
+
+  mvwhline(main_win_ptr, next_move_padding, 1, ' ', main_win_width - 2);
 
   modifier_wrapper(main_win_ptr, A_BOLD, [&]() {
-    mvwprintw_centered(main_win_ptr, main_win_width, next_move_padding, to_move_text);
+    mvwprintw_centered(main_win_ptr, main_win_width, title_padding, title);
+    mvwprintw_centered(main_win_ptr, main_win_width, next_move_padding, status_text);
   });
 
   modifier_wrapper(board_win_ptr, A_DIM, [&]() {
@@ -201,22 +217,6 @@ void BoardWin::handle_piece_selection() {
       promotion_move = *selected_move;
       popup_handler.show_popup("promote");
       return;
-
-      // if (choice == 0) {
-      //   selected_square = std::nullopt;
-      //   return;
-      // }
-
-      // PieceType promotion_pieces[] = {PIECE_QUEEN, PIECE_ROOK, PIECE_BISHOP, PIECE_KNIGHT};
-      // PieceType chosen_piece = promotion_pieces[choice];
-
-      // for (int i = 0; i < legal_moves.count; i++) {
-      //   if (legal_moves[i].to == highlighted_square && legal_moves[i].is_promotion()
-      //       && legal_moves[i].promotion_piece == chosen_piece) {
-      //     selected_move = &legal_moves[i];
-      //     break;
-      //   }
-      // }
     }
 
     move_successful = state.game.make_move(*selected_move);
@@ -226,7 +226,7 @@ void BoardWin::handle_piece_selection() {
   if (move_successful) {
     selected_square = std::nullopt;
 
-    if (state.game.current_mode == PLAYER_VS_ENGINE) { state.game.make_engine_move(); }
+    if (state.game.get_current_mode() == PLAYER_VS_ENGINE) { state.game.make_engine_move(); }
     return;
   }
 

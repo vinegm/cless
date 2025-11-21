@@ -38,6 +38,7 @@ private:
       {"A game is currently in progress. Start a new game?"},
       {"Return to game", "Start new game"}
   };
+  Popup select_color_popup{{"Select your color:"}, {"White", "Black", "Random"}};
   Popup confirm_exit_popup{{"Exiting will lose current game progress!"}, {"Cancel", "Exit anyway"}};
 
   void select_option();

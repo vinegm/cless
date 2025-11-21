@@ -33,7 +33,7 @@ public:
   void set_fen(const std::string &fen);
   std::string get_fen() const;
 
-  Piece get_piece_at(Square square);
+  Piece get_piece_at(Square square) const;
   void make_move(const Move &move);
   void undo_move();
 

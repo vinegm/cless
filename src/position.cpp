@@ -166,7 +166,7 @@ std::string Position::get_fen() const {
   return fen;
 }
 
-Piece Position::get_piece_at(Square square) {
+Piece Position::get_piece_at(Square square) const {
   uint8_t encoded_piece = lookup_table[square];
   if (encoded_piece == 0) return Piece{WHITE, PIECE_NONE};
 

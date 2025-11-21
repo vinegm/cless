@@ -6,11 +6,19 @@
 #include "position.hpp"
 
 #include <memory>
-#include <stdexcept>
 
 enum GameMode {
   PLAYER_VS_PLAYER,
   PLAYER_VS_ENGINE
+};
+
+enum GameResult {
+  GAME_ONGOING,
+  CHECKMATE,
+  STALEMATE,
+  DRAW_INSUFFICIENT_MATERIAL,
+  DRAW_FIFTY_MOVE_RULE,
+  DRAW_OTHER
 };
 
 class GameState {
@@ -21,20 +29,13 @@ public:
   }
   GameState() : pos(INITIAL_POSITION_FEN) {}
 
-  PieceColor player_color = ANY;
-  GameMode current_mode = PLAYER_VS_PLAYER;
-  bool ongoing_game = false;
-  bool has_engine = false;
+  void new_game(GameMode mode, PieceColor player_color = ANY);
+  void end_game() { ongoing_game = false; }
+  bool is_game_ongoing() const { return ongoing_game && get_game_result() == GAME_ONGOING; }
+  bool has_engine_available() const { return has_engine; }
+  GameMode get_current_mode() const { return current_mode; }
+  PieceColor get_player_color() const { return player_color; }
 
-  void new_game(GameMode mode) {
-    if (mode == PLAYER_VS_ENGINE && !has_engine) {
-      throw std::runtime_error("GameState::new_game() - No engine available!");
-    }
-
-    pos.set_fen(INITIAL_POSITION_FEN);
-    ongoing_game = true;
-    current_mode = mode;
-  }
   std::string get_fen() const { return pos.get_fen(); }
   void set_fen(const std::string &fen) { return pos.set_fen(fen); }
 
@@ -51,7 +52,14 @@ public:
 
   bool make_engine_move();
 
+  GameResult get_game_result() const;
+
 private:
+  PieceColor player_color = ANY;
+  GameMode current_mode = PLAYER_VS_PLAYER;
+  bool ongoing_game = false;
+  bool has_engine = false;
+
   std::unique_ptr<ExtEngine> engine = nullptr;
   MoveGenerator generator;
   Position pos;
